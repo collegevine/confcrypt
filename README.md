@@ -14,7 +14,7 @@ As soon as an application is deployed or built on more than a single machine, yo
     # Parameter schema take the following shape:
     # schema := [term | value | comment]
     #   term := confname : type
-    #   confname := [a-z,A-Z,_,-,0-9]
+    #   confname := [a-z,A-Z,_,0-9]
     #   type := String | Int | Boolean
     #   value := confname = String
     #   comment := # String
@@ -53,7 +53,7 @@ As soon as an application is deployed or built on more than a single machine, yo
     # Parameter schema take the following shape:
     # schema := [term | value | comment]
     #   term := confname : type
-    #   confname := [a-z,A-Z,_,-,0-9]
+    #   confname := [a-z,A-Z,_,0-9]
     #   type := String | Int | Boolean
     #   value := confname = String
     #   comment := # String

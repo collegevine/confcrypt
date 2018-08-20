@@ -26,15 +26,18 @@ dependencies:
 - cryptonite
 - mtl
 - transformers
-- attoparsec
+- megaparsec
 - containers
+- parser-combinators
+- deepseq
 
 library:
   source-dirs: src
   exposed-modules:
     - ConfCrypt.Types
+    - ConfCrypt.Parser
   default-extensions: MultiParamTypeClasses OverloadedStrings FlexibleContexts FlexibleInstances NamedFieldPuns
-        TupleSections
+        TupleSections DeriveGeneric DeriveAnyClass
 
 
 executables:
@@ -47,14 +50,25 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - confcrypt
+    default-extensions: MultiParamTypeClasses OverloadedStrings FlexibleContexts FlexibleInstances NamedFieldPuns
+        TupleSections
 
 tests:
   confcrypt-test:
-    main:                Spec.hs
+    main:                Tests.hs
     source-dirs:         test
+    other-modules:
+        ConfCrypt.Parser.Tests
     ghc-options:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
     - confcrypt
+    - tasty
+    - tasty-quickcheck
+    - QuickCheck
+    - tasty-hunit
+    - HUnit
+    default-extensions: MultiParamTypeClasses OverloadedStrings FlexibleContexts FlexibleInstances NamedFieldPuns
+        TupleSections
