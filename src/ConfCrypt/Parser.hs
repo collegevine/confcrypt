@@ -9,12 +9,13 @@ import Control.Applicative.Combinators (manyTill, many)
 import Data.Maybe (listToMaybe)
 import Text.Megaparsec (Parsec, parse, getPosition, SourcePos(..), unPos, (<?>), try)
 import Text.Megaparsec.Char (char, space, eol, anyChar, string, digitChar, alphaNumChar,
-    oneOf, symbolChar, separatorChar)
+    oneOf, symbolChar, separatorChar, letterChar, digitChar)
 import qualified Data.Text as T
 import qualified Data.Map as M
 
 type Parser = Parsec ConfCryptError T.Text
 
+-- TODO handle duplicates
 parseConfCrypt ::
     FilePath
     -> T.Text
@@ -53,6 +54,7 @@ parseComment = do
     _ <- space
     _ <- char '#'
     line <- T.pack <$> manyTill anyChar eol
+    _ <- many eol
     pure (CommentLine line, lineNum)
 
 parseSchema :: Parser (ConfCryptElement, LineNumber)
@@ -61,10 +63,10 @@ parseSchema = do
     _ <- space
     name <- validName
     _ <- space
-    _ <- string "::"
+    _ <- char ':'
     _ <- space
     tpe <- parseType
-    _ <- eol
+    _ <- many eol
     pure (SchemaLine Schema {sName= name, sType= tpe}, lineNum)
 
 parseType :: Parser SchemaType
@@ -89,6 +91,7 @@ parseParameter = do
     _ <- char '='
     _ <- space
     value <- validValue
+    _ <- many eol
     pure (ParameterLine ParamLine {pName= name, pValue = value}, lineNum)
 
 parseLineNum :: Parser LineNumber
@@ -97,8 +100,8 @@ parseLineNum =
 
 validName :: Parser T.Text
 validName =
-    T.pack <$> manyTill (try alphaNumChar <|> try (char '_')) space
+    T.pack <$> many (letterChar <|> digitChar <|> (char '_'))
 
 validValue :: Parser T.Text
 validValue =
-    T.pack <$> manyTill anyChar eol
+    T.pack <$> many anyChar
