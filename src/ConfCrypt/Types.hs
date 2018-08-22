@@ -1,13 +1,27 @@
 module ConfCrypt.Types where
 
+import Control.Monad.Reader (MonadReader, ReaderT)
+import Control.Monad.Except (MonadError, ExceptT)
+import Control.Monad.Writer (MonadWriter, WriterT)
+import Control.DeepSeq (NFData)
+import qualified Crypto.PubKey.RSA.Types as RSA
+import GHC.Generics (Generic)
 import qualified Data.Text as T
 import qualified Data.Map as M
-import Control.DeepSeq (NFData)
-import GHC.Generics (Generic)
 
-data ConfCryptError =
-    ParserError T.Text
-    deriving (Show, Generic, NFData, Eq, Ord)
+type ConfCryptM m ctx = ReaderT (ConfCryptFile, ctx) (WriterT [T.Text] (ExceptT ConfCryptError m))
+
+data ConfCryptError
+    = ParserError T.Text
+    | NonRSAKey
+    | DecryptionError RSA.Error
+    | EncryptionError RSA.Error
+    | MissingLine T.Text
+    | WrongFileAction T.Text
+    deriving (Show, Generic, Eq, Ord)
+
+instance Ord RSA.Error where
+    (<=) l r = show l <= show r
 
 data ConfCryptFile =
     ConfCryptFile {

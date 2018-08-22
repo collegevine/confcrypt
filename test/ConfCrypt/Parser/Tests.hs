@@ -18,9 +18,9 @@ parserTests = testGroup "config file parser" [
     properties,
     explicitFiles
     ]
-
 properties :: TestTree
 properties = testGroup "parser properties" [
+    error "implement properties"
     ]
 
 explicitFiles :: TestTree
