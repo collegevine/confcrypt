@@ -37,6 +37,7 @@ library:
   exposed-modules:
     - ConfCrypt.Types
     - ConfCrypt.Parser
+    - ConfCrypt.Commands
   default-extensions: MultiParamTypeClasses OverloadedStrings FlexibleContexts FlexibleInstances NamedFieldPuns
         TupleSections DeriveGeneric DeriveAnyClass FunctionalDependencies
 
@@ -59,7 +60,9 @@ tests:
     main:                Tests.hs
     source-dirs:         test
     other-modules:
-        ConfCrypt.Parser.Tests
+        ConfCrypt.Parser.Tests,
+        ConfCrypt.Commands.Tests,
+        ConfCrypt.Common
     ghc-options:
     - -threaded
     - -rtsopts

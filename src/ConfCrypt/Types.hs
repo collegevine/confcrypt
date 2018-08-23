@@ -34,7 +34,27 @@ data ConfCryptElement
     = SchemaLine Schema
     | CommentLine {cText ::T.Text}
     | ParameterLine  ParamLine
-    deriving (Eq, Ord, Show, Generic, NFData)
+    deriving (Show, Generic, NFData)
+
+-- | this implementation means that there can only be a single parameter or schema with the same name.
+-- Attempting to add multiple with the same name is undefined behavior and will result in missing data.
+instance Eq ConfCryptElement where
+    (==) (SchemaLine l) (SchemaLine r) = sName l == sName r
+    (==) (ParameterLine l) (ParameterLine r) = pName l == pName r
+    (==) (CommentLine l) (CommentLine r) = l == r
+    (==) _ _ = False
+
+-- | TODO ccoffey talk about this as a gotcha. The requirement is that for two
+instance Ord ConfCryptElement where
+    (<=) (SchemaLine l) (SchemaLine r) = sName l <= sName r
+    (<=) (SchemaLine l) (CommentLine _) = False
+    (<=) (SchemaLine l) (ParameterLine _) = True
+    (<=) (ParameterLine l) (ParameterLine r) = pName l <= pName r
+    (<=) (ParameterLine l) (CommentLine _) = False
+    (<=) (ParameterLine l) (SchemaLine _) = False
+    (<=) (CommentLine l) (CommentLine  r) = l <= r
+    (<=) (CommentLine l) (ParameterLine _) = True
+    (<=) (CommentLine l) (SchemaLine _) = True
 
 data Parameter = Parameter {paramName :: T.Text, paramValue :: T.Text, paramType :: Maybe SchemaType}
     deriving (Eq, Ord, Show, Generic, NFData)
@@ -51,6 +71,13 @@ data SchemaType
     | CInt
     | CBoolean
     deriving (Eq, Ord, Show, Generic, NFData)
+
+typeToOutputString ::
+    SchemaType
+    -> T.Text
+typeToOutputString CString = "String"
+typeToOutputString CInt = "Int"
+typeToOutputString CBoolean = "Boolean"
 
 -- | Convert a parameter into a 'ParameterLine' and 'SchemaLine' if possible.
 parameterToLines ::

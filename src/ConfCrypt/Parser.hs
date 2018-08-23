@@ -7,15 +7,18 @@ import ConfCrypt.Types
 import Control.Applicative ((<|>))
 import Control.Applicative.Combinators (manyTill, many)
 import Data.Maybe (listToMaybe)
-import Text.Megaparsec (Parsec, parse, getPosition, SourcePos(..), unPos, (<?>), try)
-import Text.Megaparsec.Char (char, space, eol, anyChar, string, digitChar, alphaNumChar,
+import Text.Megaparsec (Parsec, parse, getPosition, SourcePos(..), unPos, (<?>), try, failure)
+import Text.Megaparsec.Char (char, space, eol, anyChar, string', digitChar, alphaNumChar,
     oneOf, symbolChar, separatorChar, letterChar, digitChar)
 import qualified Data.Text as T
 import qualified Data.Map as M
+import qualified Data.Set as S
 
 type Parser = Parsec ConfCryptError T.Text
 
--- TODO handle duplicates
+-- | Duplicates are removed by virtue of using a 'Map'. This means the behavior for having duplciate
+-- parameter names is officially undefined, but as implemented the last parameter read will be preserved.
+-- DO NOT RELY ON THIS BEHAVIOR!
 parseConfCrypt ::
     FilePath
     -> T.Text
@@ -46,13 +49,14 @@ confCryptParser :: Parser [(ConfCryptElement, LineNumber)]
 confCryptParser =
     many lineParser
     where
-        lineParser = try parseComment <|> try parseSchema <|> try parseParameter
+        lineParser = try parseComment <|> try parseSchema <|> try parseParameter <|> failure Nothing S.empty
 
 parseComment :: Parser (ConfCryptElement, LineNumber)
 parseComment = do
     lineNum <- parseLineNum
     _ <- space
     _ <- char '#'
+    _ <- space
     line <- T.pack <$> manyTill anyChar eol
     _ <- many eol
     pure (CommentLine line, lineNum)
@@ -72,13 +76,13 @@ parseSchema = do
 parseType :: Parser SchemaType
 parseType = let
     tryString = do
-        _ <- try $ string "String"
+        _ <- try $ string' "String"
         pure CString
     tryInt = do
-        _ <- try $ string "Int"
+        _ <- try $ string' "Int"
         pure CInt
     tryBoolean = do
-        _ <- try $ string "Boolean"
+        _ <- try $ string' "Boolean"
         pure CBoolean
     in tryString <|> tryInt <|> tryBoolean
 
@@ -104,4 +108,4 @@ validName =
 
 validValue :: Parser T.Text
 validValue =
-    T.pack <$> many anyChar
+    T.pack <$> manyTill anyChar eol

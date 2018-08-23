@@ -5,7 +5,8 @@ module ConfCrypt.Commands (
 
     -- | Exported for testing
     genNewFileState,
-    writeFullContentsToBuffer
+    writeFullContentsToBuffer,
+    FileAction(..)
     ) where
 
 import ConfCrypt.Types
@@ -51,20 +52,23 @@ genNewFileState :: (Monad m, MonadError ConfCryptError m) =>
     -> [(ConfCryptElement, FileAction)] -- ^ edits
     -> m (M.Map ConfCryptElement LineNumber) -- ^ new file, with edits applied in-place
 genNewFileState fileContents [] = pure fileContents
+genNewFileState fileContents ((CommentLine _, _):rest) = genNewFileState fileContents rest
 genNewFileState fileContents ((line, action):rest) =
     case M.toList (mLine line) of
         [] ->
             case action of
                 Add -> let
-                    LineNumber highestLineNum = maximum $ M.elems fileContents
+                    nums =  M.elems fileContents
+                    LineNumber highestLineNum = if null nums then LineNumber 1 else maximum nums
                     fc' = M.insert line (LineNumber $ highestLineNum + 1) fileContents
                     in genNewFileState fc' rest
                 _ -> throwError $ MissingLine (T.pack $ show line)
-        [(key, lineNum)] ->
+        [(key, lineNum@(LineNumber lnValue))] ->
             case action of
                 Remove -> let
                     fc' = M.delete key fileContents
-                    in genNewFileState fc' rest
+                    fc'' = (\(LineNumber l) -> if l > lnValue then LineNumber (l - 1) else LineNumber l) <$> fc'
+                    in genNewFileState fc'' rest
                 Edit -> let
                     fc' = M.delete key fileContents
                     fc'' = M.insert line lineNum fc'
@@ -73,13 +77,7 @@ genNewFileState fileContents ((line, action):rest) =
         _ -> error "viloates map key uniqueness"
 
     where
-        mLine (ParameterLine (ParamLine pname _)) = M.filterWithKey (\k _ -> findParam pname k) fileContents
-        mLine (SchemaLine (Schema sname _)) = M.filterWithKey (\k _ -> findSchema sname k) fileContents
-        mLine _ = fileContents
-        findParam name (ParameterLine (ParamLine pname _)) = name == pname
-        findParam name _ = False
-        findSchema name (SchemaLine (Schema sname _)) = name == sname
-        findSchema name _ = False
+        mLine l = M.filterWithKey (\k _ -> k == l) fileContents
 
 writeFullContentsToBuffer :: (Monad m, MonadWriter [T.Text] m) =>
     M.Map ConfCryptElement LineNumber
@@ -101,6 +99,6 @@ toDisplayLine ::
     ConfCryptElement
     -> T.Text
 toDisplayLine (CommentLine comment) = "# " <> comment
-toDisplayLine (SchemaLine (Schema name tpe)) = name <> " : " <> (T.pack $ show tpe)
+toDisplayLine (SchemaLine (Schema name tpe)) = name <> " : " <> typeToOutputString tpe
 toDisplayLine (ParameterLine (ParamLine name val)) = name <> " = " <> val
 
