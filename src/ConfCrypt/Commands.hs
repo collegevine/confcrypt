@@ -6,20 +6,20 @@ module ConfCrypt.Commands (
     -- | Exported for testing
     genNewFileState,
     writeFullContentsToBuffer,
+
     FileAction(..)
     ) where
 
 import ConfCrypt.Types
+import ConfCrypt.Encryption (encryptValue, decryptValue)
 
 import Control.Monad.Reader (ask)
 import Control.Monad.Except (throwError, MonadError)
 import Control.Monad.Writer (tell, MonadWriter)
-import Crypto.PubKey.OpenSsh (OpenSshPrivateKey)
-import Crypto.PubKey.RSA.Types (PrivateKey)
-import Crypto.PubKey.RSA.PKCS15 (encrypt, decrypt)
 import Data.Foldable (foldrM, traverse_)
 import Data.List (sortOn)
 import GHC.Generics (Generic)
+import qualified Crypto.PubKey.RSA.Types as RSA
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import qualified Data.Map as M
@@ -33,7 +33,7 @@ class Monad m => Command a b m | a -> b where
     evaluate :: a -> m b
 
 data ReadConfCrypt = ReadConfCrypt
-instance Monad m => Command ReadConfCrypt Int (ConfCryptM m PrivateKey) where
+instance Monad m => Command ReadConfCrypt Int (ConfCryptM m RSA.PrivateKey) where
     evaluate _ = do
         (ccFile, pk) <- ask
         let params = parameters ccFile
@@ -87,13 +87,6 @@ writeFullContentsToBuffer contents =
     where
         sortedLines = fmap fst . sortOn snd $ M.toList contents
         singleton x = [x]
-
-decryptValue ::
-    PrivateKey
-    -> T.Text
-    -> Either ConfCryptError T.Text
-decryptValue privateKey encryptedValue =
-    either (Left . DecryptionError) (Right . T.decodeUtf8) $ decrypt Nothing privateKey (T.encodeUtf8 encryptedValue)
 
 toDisplayLine ::
     ConfCryptElement

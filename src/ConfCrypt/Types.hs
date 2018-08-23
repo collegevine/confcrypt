@@ -14,6 +14,7 @@ type ConfCryptM m ctx = ReaderT (ConfCryptFile, ctx) (WriterT [T.Text] (ExceptT 
 data ConfCryptError
     = ParserError T.Text
     | NonRSAKey
+    | KeyUnpackingError T.Text
     | DecryptionError RSA.Error
     | EncryptionError RSA.Error
     | MissingLine T.Text

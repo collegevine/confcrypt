@@ -23,14 +23,16 @@ dependencies:
 - base >= 4.7 && < 5
 - optparse-applicative
 - text
-- cryptonite
 - mtl
 - transformers
 - megaparsec
 - containers
 - parser-combinators
 - deepseq
+- cryptonite
 - crypto-pubkey-openssh
+- crypto-pubkey-types
+- bytestring
 
 library:
   source-dirs: src
@@ -38,6 +40,7 @@ library:
     - ConfCrypt.Types
     - ConfCrypt.Parser
     - ConfCrypt.Commands
+    - ConfCrypt.Encryption
   default-extensions: MultiParamTypeClasses OverloadedStrings FlexibleContexts FlexibleInstances NamedFieldPuns
         TupleSections DeriveGeneric DeriveAnyClass FunctionalDependencies
 
