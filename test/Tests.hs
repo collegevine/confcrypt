@@ -1,5 +1,6 @@
 import ConfCrypt.Parser.Tests (parserTests)
 import ConfCrypt.Commands.Tests (commandTests)
+import ConfCrypt.Encryption.Tests (encryptionTests)
 import Test.Tasty (TestTree, defaultMain, testGroup)
 
 main :: IO ()
@@ -15,5 +16,6 @@ appTests = testGroup "all application tests" [
 libraryTests :: TestTree
 libraryTests = testGroup "all library tests"[
     parserTests,
-    commandTests
+    commandTests,
+    encryptionTests
     ]

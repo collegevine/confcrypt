@@ -3,7 +3,7 @@ module ConfCrypt.Common where
 import ConfCrypt.Types
 
 import Control.Arrow
-import Data.Char (isAlphaNum, isPrint, isSpace, isAscii)
+import Data.Char (isAlphaNum, isPrint, isSpace, isAscii, isLatin1)
 import Data.List (nub)
 import qualified Data.Map as M
 import qualified Data.Text as T
@@ -98,3 +98,7 @@ instance Arbitrary ConfCryptElement where
 
 instance Arbitrary T.Text where
     arbitrary = T.pack <$> arbitrary
+
+newtype Latin1Text = Latin1Text T.Text deriving Show
+instance Arbitrary Latin1Text where
+    arbitrary = Latin1Text <$> arbitrary `suchThat` (all isLatin1 . T.unpack)

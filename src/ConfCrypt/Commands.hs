@@ -13,6 +13,7 @@ module ConfCrypt.Commands (
 import ConfCrypt.Types
 import ConfCrypt.Encryption (encryptValue, decryptValue)
 
+import Control.Arrow (second)
 import Control.Monad.Reader (ask)
 import Control.Monad.Except (throwError, MonadError)
 import Control.Monad.Writer (tell, MonadWriter)
@@ -37,14 +38,25 @@ instance Monad m => Command ReadConfCrypt Int (ConfCryptM m RSA.PrivateKey) wher
     evaluate _ = do
         (ccFile, pk) <- ask
         let params = parameters ccFile
-        tranformed <- mapM (\p -> decryptedParam  p $ decryptValue pk (paramValue p)) params
-        let transformedLines = undefined
+        transformed <- mapM (\p -> decryptedParam  p $ decryptValue pk (paramValue p)) params
+        let transformedLines = fmap (second (const Edit)) . M.toList $ findParameterLines ccFile transformed
         newcontents <- genNewFileState (fileContents ccFile) transformedLines
         writeFullContentsToBuffer newcontents
         pure 0
         where
             decryptedParam param (Left e) = throwError e
             decryptedParam param (Right v) = pure $ param {paramValue = v}
+
+findParameterLines ::
+    ConfCryptFile
+    -> [Parameter]
+    -> M.Map ConfCryptElement LineNumber
+findParameterLines (ConfCryptFile {fileContents}) params =
+    M.filterWithKey (\k _ -> isMatchingParam names k) fileContents
+    where
+        names = paramName <$> params
+        isMatchingParam names (ParameterLine (ParamLine {pName})) = pName `elem` names -- TODO convert to set if people start using with large sets
+        isMatchingParam _ _ = False
 
 -- | Given a known file state and some edits, apply the edits and produce the new file contents
 genNewFileState :: (Monad m, MonadError ConfCryptError m) =>

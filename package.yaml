@@ -65,6 +65,7 @@ tests:
     other-modules:
         ConfCrypt.Parser.Tests,
         ConfCrypt.Commands.Tests,
+        ConfCrypt.Encryption.Tests,
         ConfCrypt.Common
     ghc-options:
     - -threaded

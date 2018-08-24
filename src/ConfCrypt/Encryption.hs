@@ -1,5 +1,6 @@
 module ConfCrypt.Encryption (
     KeyProjection,
+    project,
     encryptValue,
     decryptValue,
     loadRSAKey,
@@ -18,8 +19,8 @@ import Crypto.Types.PubKey.RSA (PrivateKey(..), PublicKey(..))
 import Crypto.PubKey.RSA.PKCS15 (encrypt, decrypt)
 import Crypto.Random.Types (MonadRandom)
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as BSC
 import Data.Text as T
-import Data.Text.Encoding as T
 
 class KeyProjection key where
     project :: RSA.KeyPair -> key
@@ -66,16 +67,18 @@ decryptValue ::
     RSA.PrivateKey
     -> T.Text
     -> Either ConfCryptError T.Text
+decryptValue _ "" = Right ""
 decryptValue privateKey encryptedValue =
-    either (Left . DecryptionError) (Right . T.decodeUtf8) $ decrypt Nothing privateKey (T.encodeUtf8 encryptedValue)
+    either (Left . DecryptionError) (Right . T.pack . BSC.unpack) $ decrypt Nothing privateKey (BSC.pack . T.unpack $ encryptedValue)
 
 -- | Encrypt a
 encryptValue :: MonadRandom m =>
     RSA.PublicKey
     -> T.Text
     -> m (Either ConfCryptError T.Text)
+encryptValue _ "" = pure $ Right ""
 encryptValue publicKey nakedValue = do
     res <- encrypt publicKey bytes
-    pure $ either (Left . EncryptionError) (Right . T.decodeUtf8) res
+    pure $ either (Left . EncryptionError) (Right . T.pack . BSC.unpack) res
     where
-        bytes = T.encodeUtf8 nakedValue
+        bytes = BSC.pack $ T.unpack nakedValue
