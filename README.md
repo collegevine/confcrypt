@@ -37,7 +37,7 @@ As soon as an application is deployed or built on more than a single machine, yo
     `confcrypt delete --name <filename>
     Removes an existing config parameter & associated schema. Returns 0 on success or 1 if the parameter is not found in the file.
 - edit a parameter in-place
-    `confcrypt edit --key <filename> --name --value --type <SchemaType> <filename>`
+    `confcrypt edit --key <filename> --name <String> --value <String> --type <SchemaType> <filename>`
     Modifies an existing configuration parameter in place, leaving all other lines unchanged. While this isn't how it's actually implemented, this operation is equivalent to piping `confcrypt read` to a new file, editing the parameter, then reencrypting it.
 - validate a config
     `confcrypt validate --key <filename> <filename>`

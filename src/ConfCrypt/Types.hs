@@ -71,7 +71,7 @@ data SchemaType
     = CString
     | CInt
     | CBoolean
-    deriving (Eq, Ord, Show, Generic, NFData)
+    deriving (Eq, Ord, Show, Generic, NFData, Read)
 
 typeToOutputString ::
     SchemaType

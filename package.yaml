@@ -55,17 +55,19 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - confcrypt
+    - optparse-applicative
     default-extensions: MultiParamTypeClasses OverloadedStrings FlexibleContexts FlexibleInstances NamedFieldPuns
-        TupleSections
+        TupleSections ExistentialQuantification
 
 tests:
   confcrypt-test:
     main:                Tests.hs
-    source-dirs:         test
+    source-dirs:         test, app
     other-modules:
         ConfCrypt.Parser.Tests,
         ConfCrypt.Commands.Tests,
         ConfCrypt.Encryption.Tests,
+        ConfCrypt.CLI.API.Tests,
         ConfCrypt.Common
     ghc-options:
     - -threaded

@@ -1,7 +1,15 @@
 module ConfCrypt.Commands (
+    -- | Command class
     Command,
-    ReadConfCrypt,
     evaluate,
+
+    -- | Supported Commands
+    ReadConfCrypt,
+    AddConfCrypt(..),
+    EditConfCrypt(..),
+    DeleteConfCrypt(..),
+    ValidateConfCrypt(..),
+    EncryptWholeConfCrypt(..),
 
     -- | Exported for testing
     genNewFileState,
@@ -17,6 +25,7 @@ import Control.Arrow (second)
 import Control.Monad.Reader (ask)
 import Control.Monad.Except (throwError, MonadError)
 import Control.Monad.Writer (tell, MonadWriter)
+import Crypto.Random (MonadRandom)
 import Data.Foldable (foldrM, traverse_)
 import Data.List (sortOn)
 import GHC.Generics (Generic)
@@ -30,11 +39,11 @@ data FileAction
     | Edit
     | Remove
 
-class Monad m => Command a b m | a -> b where
-    evaluate :: a -> m b
+class Monad m => Command a m where
+    evaluate :: a -> m ()
 
-data ReadConfCrypt = ReadConfCrypt
-instance Monad m => Command ReadConfCrypt Int (ConfCryptM m RSA.PrivateKey) where
+data ReadConfCrypt
+instance Monad m => Command ReadConfCrypt (ConfCryptM m RSA.PrivateKey) where
     evaluate _ = do
         (ccFile, pk) <- ask
         let params = parameters ccFile
@@ -42,10 +51,41 @@ instance Monad m => Command ReadConfCrypt Int (ConfCryptM m RSA.PrivateKey) wher
         let transformedLines = fmap (second (const Edit)) . M.toList $ findParameterLines ccFile transformed
         newcontents <- genNewFileState (fileContents ccFile) transformedLines
         writeFullContentsToBuffer newcontents
-        pure 0
         where
             decryptedParam param (Left e) = throwError e
             decryptedParam param (Right v) = pure $ param {paramValue = v}
+
+data AddConfCrypt = AddConfCrypt {aName :: T.Text, aValue :: T.Text, aType :: SchemaType}
+    deriving (Eq, Read, Show, Generic)
+instance (Monad m, MonadRandom m) => Command AddConfCrypt (ConfCryptM m RSA.PublicKey) where
+    evaluate AddConfCrypt {aName, aValue, aType} =  do
+        (ccFile, pubKey) <- ask
+        let contents = fileContents ccFile
+            instructions = [(SchemaLine sl, Add), (ParameterLine pl, Add)]
+        newcontents <- genNewFileState contents instructions
+        writeFullContentsToBuffer newcontents
+        where
+            (pl, Just sl) = parameterToLines $ Parameter {paramName = aName, paramValue = aValue, paramType = Just aType}
+
+
+data EditConfCrypt = EditConfCrypt {eName:: T.Text, eValue :: T.Text, eType :: SchemaType}
+    deriving (Eq, Read, Show, Generic)
+instance (Monad m, MonadRandom m) => Command EditConfCrypt (ConfCryptM m RSA.PublicKey) where
+    evaluate = undefined
+
+
+data DeleteConfCrypt = DeleteConfCrypt {dName:: T.Text}
+    deriving (Eq, Read, Show, Generic)
+instance (Monad m, MonadRandom m) => Command DeleteConfCrypt (ConfCryptM m ()) where
+    evaluate = undefined
+
+data ValidateConfCrypt
+instance (Monad m) => Command ValidateConfCrypt (ConfCryptM m RSA.PrivateKey) where
+    evaluate = undefined
+
+data EncryptWholeConfCrypt
+instance (Monad m, MonadRandom m) => Command EncryptWholeConfCrypt (ConfCryptM m RSA.PublicKey) where
+    evaluate = undefined
 
 findParameterLines ::
     ConfCryptFile

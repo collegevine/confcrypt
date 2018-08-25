@@ -19,8 +19,6 @@ import Test.Tasty.HUnit
 import qualified Data.Text as T
 import qualified Data.Map as M
 
-import Debug.Trace
-
 commandTests :: TestTree
 commandTests = testGroup "command tests" [
     modifyFileProperties,
