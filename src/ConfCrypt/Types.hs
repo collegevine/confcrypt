@@ -7,7 +7,7 @@ import Control.DeepSeq (NFData)
 import qualified Crypto.PubKey.RSA.Types as RSA
 import GHC.Generics (Generic)
 import qualified Data.Text as T
-import qualified Data.Map as M
+import qualified Data.Map.Strict as M
 
 type ConfCryptM m ctx = ReaderT (ConfCryptFile, ctx) (WriterT [T.Text] (ExceptT ConfCryptError m))
 
@@ -19,6 +19,7 @@ data ConfCryptError
     | DecryptionError RSA.Error
     | EncryptionError RSA.Error
     | MissingLine T.Text
+    | UnknownParameter T.Text
     | WrongFileAction T.Text
     deriving (Show, Generic, Eq, Ord)
 

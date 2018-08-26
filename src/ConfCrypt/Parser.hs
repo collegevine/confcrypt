@@ -5,7 +5,7 @@ module ConfCrypt.Parser (
 import ConfCrypt.Types
 
 import Control.Applicative ((<|>))
-import Control.Applicative.Combinators (manyTill, many)
+import Control.Applicative.Combinators (manyTill, many, some)
 import Data.Maybe (listToMaybe)
 import Text.Megaparsec (Parsec, parse, getPosition, SourcePos(..), unPos, (<?>), try, failure)
 import Text.Megaparsec.Char (char, space, eol, anyChar, string', digitChar, alphaNumChar,
@@ -49,14 +49,14 @@ confCryptParser :: Parser [(ConfCryptElement, LineNumber)]
 confCryptParser =
     many lineParser
     where
-        lineParser = try parseComment <|> try parseSchema <|> try parseParameter <|> failure Nothing S.empty
+        lineParser = try parseComment <|> try parseSchema <|> try parseParameter
 
 parseComment :: Parser (ConfCryptElement, LineNumber)
 parseComment = do
     lineNum <- parseLineNum
     _ <- space
     _ <- char '#'
-    _ <- space
+    _ <- char ' '
     line <- T.pack <$> manyTill anyChar eol
     _ <- many eol
     pure (CommentLine line, lineNum)
@@ -68,7 +68,7 @@ parseSchema = do
     name <- validName
     _ <- space
     _ <- char ':'
-    _ <- space
+    _ <- char ' '
     tpe <- parseType
     _ <- many eol
     pure (SchemaLine Schema {sName= name, sType= tpe}, lineNum)

@@ -8,23 +8,28 @@ import ConfCrypt.Parser
 import ConfCrypt.Encryption
 import ConfCrypt.CLI.API
 
+import Control.DeepSeq (force)
 import Control.Monad.Reader (MonadReader, ReaderT, runReaderT, withReaderT)
 import Control.Monad.Except (MonadError, ExceptT, runExceptT)
 import Control.Monad.Writer (MonadWriter, WriterT, execWriterT)
 import Crypto.PubKey.RSA.Types (PublicKey, PrivateKey)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
-import Options.Applicative (execParser)
+import Options.Applicative (execParserPure, defaultPrefs, ParserResult(..))
 import System.Exit (exitSuccess, exitFailure, exitWith, ExitCode(..))
 
 run ::
     [String] -- ^ Command line arguments
     -> IO [T.Text]
 run programArguments = do
-    parsedArguments <- execParser cliParser
+    parsedArguments <- either (\e -> print e *> exitFailure)
+                              pure
+                              (resToEither $ execParserPure defaultPrefs cliParser programArguments)
     let filePath = confFilePath parsedArguments
-    configParsingResults <- parseConfCrypt filePath <$> T.readFile filePath
+    lines <- T.readFile filePath
+    configParsingResults <- parseConfCrypt filePath <$> pure lines
     case configParsingResults of
+        --TODO print errors to stdErr
         Left err -> print err *> exitFailure
         Right parsedConfiguration -> do
             result <- case parsedArguments of
@@ -56,6 +61,9 @@ run programArguments = do
         injectPubKey key (conf, _) = (conf, key)
         injectPrivateKey :: PrivateKey -> (ConfCryptFile, ()) -> (ConfCryptFile, PrivateKey)
         injectPrivateKey key (conf, _) = (conf, key)
+        resToEither (Success a) = Right a
+        resToEither (Failure _) = Left "Failed to parse cmd line args"
+        resToEither (CompletionInvoked _) = Left  "Completion not supported"
 
 
 runConfCrypt :: Monad m =>

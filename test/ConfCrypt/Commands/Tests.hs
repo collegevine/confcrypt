@@ -5,11 +5,15 @@ module ConfCrypt.Commands.Tests (
 import ConfCrypt.Types
 import ConfCrypt.Commands
 import ConfCrypt.Parser
+import ConfCrypt.Encryption (unpackPrivateRSAKey)
 
 import ConfCrypt.Common
 
+import Control.Monad.Identity (runIdentity)
+import Control.Monad.Reader (runReaderT)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Writer (execWriter)
+import Crypto.Random (withDRG, drgNewSeed, seedFromInteger)
 import Data.Monoid ((<>))
 import Data.List (sort, nub)
 import Test.Tasty
@@ -22,8 +26,7 @@ import qualified Data.Map as M
 commandTests :: TestTree
 commandTests = testGroup "command tests" [
     modifyFileProperties,
-    bufferWriteProperties,
-    readProperties
+    bufferWriteProperties
     ]
 
 modifyFileProperties :: TestTree
@@ -62,11 +65,6 @@ bufferWriteProperties  = testGroup "Buffer write" [
         in either (const False)
                   (\ccf' -> fileContents ccf' == fc)
                   parseRes
-    ]
-
-readProperties :: TestTree
-readProperties = testGroup "read file contents" [
-    -- read file == read (read file)
     ]
 
 isComment (CommentLine _) = True

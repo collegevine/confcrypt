@@ -60,7 +60,7 @@ executables:
     - confcrypt
     - optparse-applicative
     default-extensions: MultiParamTypeClasses OverloadedStrings FlexibleContexts FlexibleInstances NamedFieldPuns
-        TupleSections ExistentialQuantification TypeApplications UndecidableInstances
+        TupleSections ExistentialQuantification TypeApplications UndecidableInstances BangPatterns ViewPatterns
 
 tests:
   confcrypt-test:

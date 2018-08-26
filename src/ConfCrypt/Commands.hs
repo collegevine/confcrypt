@@ -22,6 +22,7 @@ import ConfCrypt.Types
 import ConfCrypt.Encryption (encryptValue, decryptValue)
 
 import Control.Arrow (second)
+import Control.Monad (when)
 import Control.Monad.Trans (lift)
 import Control.Monad.Reader (ask)
 import Control.Monad.Except (throwError, MonadError)
@@ -35,7 +36,6 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import qualified Data.Map as M
 
-import Debug.Trace
 
 data FileAction
     = Add
@@ -53,7 +53,7 @@ instance Monad m => Command ReadConfCrypt (ConfCryptM m RSA.PrivateKey) where
         transformed <- mapM (\p -> decryptedParam  p $ decryptValue pk (paramValue p)) params
         let transformedLines = [(p, Edit)| p <- transformed]
         newcontents <- genNewFileState (fileContents ccFile) transformedLines
-        writeFullContentsToBuffer newcontents
+        writeFullContentsToBuffer False newcontents
         where
             decryptedParam param (Left e) = throwError e
             decryptedParam param (Right v) = pure . ParameterLine $ ParamLine {pName = paramName param, pValue = v}
@@ -66,9 +66,9 @@ instance (Monad m, MonadRandom m) => Command AddConfCrypt (ConfCryptM m RSA.Publ
         mEncryptedValue <- lift . lift . lift $ encryptValue pubKey aValue
         encryptedValue <- either throwError pure mEncryptedValue
         let contents = fileContents ccFile
-            instructions = [(SchemaLine sl, Add), (ParameterLine (pl {pValue = wrapEncryptedValue encryptedValue}), Add)]
+            instructions = [(SchemaLine sl, Add), (ParameterLine (pl {pValue = encryptedValue}), Add)]
         newcontents <- genNewFileState contents instructions
-        writeFullContentsToBuffer newcontents
+        writeFullContentsToBuffer True newcontents
         where
             (pl, Just sl) = parameterToLines $ Parameter {paramName = aName, paramValue = aValue, paramType = Just aType}
 
@@ -76,7 +76,26 @@ instance (Monad m, MonadRandom m) => Command AddConfCrypt (ConfCryptM m RSA.Publ
 data EditConfCrypt = EditConfCrypt {eName:: T.Text, eValue :: T.Text, eType :: SchemaType}
     deriving (Eq, Read, Show, Generic)
 instance (Monad m, MonadRandom m) => Command EditConfCrypt (ConfCryptM m RSA.PublicKey) where
-    evaluate = undefined
+    --TODO this implementation is extremely similar 'Add', factor it out
+    evaluate EditConfCrypt {eName, eValue, eType} = do
+        (ccFile, pk) <- ask
+
+        -- Editing an existing parameter requires that the file is inplace. Its not difficult to fall back into
+        -- 'add' behavior in the case where the parameter isn't present, but I'm not implementing that right now.
+        when (null . filter ((==) eName . paramName) $ parameters ccFile) $
+            throwError $ UnknownParameter eName
+
+        mEncryptedValue <- lift . lift . lift $ encryptValue pk eValue
+        encryptedValue <- either throwError pure mEncryptedValue
+        let contents = fileContents ccFile
+            instructions = [(SchemaLine sl, Edit),
+                            (ParameterLine (pl {pValue = encryptedValue}), Edit)
+                           ]
+        newcontents <- genNewFileState contents instructions
+        writeFullContentsToBuffer True newcontents
+        where
+            (pl, Just sl) = parameterToLines $ Parameter {paramName = eName, paramValue = eValue, paramType = Just eType}
+
 
 
 data DeleteConfCrypt = DeleteConfCrypt {dName:: T.Text}
@@ -105,7 +124,7 @@ genNewFileState fileContents ((line, action):rest) =
             case action of
                 Add -> let
                     nums =  M.elems fileContents
-                    LineNumber highestLineNum = if null nums then LineNumber 1 else maximum nums
+                    LineNumber highestLineNum = if null nums then LineNumber 0 else maximum nums
                     fc' = M.insert line (LineNumber $ highestLineNum + 1) fileContents
                     in genNewFileState fc' rest
                 _ -> throwError $ MissingLine (T.pack $ show line)
@@ -117,29 +136,31 @@ genNewFileState fileContents ((line, action):rest) =
                     in genNewFileState fc'' rest
                 Edit -> let
                     fc' = M.delete key fileContents
-                    fc'' = M.insert (trace ("Ostensibly Adding: " <> show line) line) lineNum fc'
+                    fc'' = M.insert line lineNum fc'
                     in genNewFileState fc'' rest
-                _ -> throwError $ WrongFileAction ((<> " should be an Add"). T.pack $ show line)
+                _ -> throwError $ WrongFileAction ((<> " is an Add, but the line already exists. Did you mean to edit?"). T.pack $ show line)
         _ -> error "viloates map key uniqueness"
 
     where
         mLine l = M.filterWithKey (\k _ -> k == l) fileContents
 
 writeFullContentsToBuffer :: (Monad m, MonadWriter [T.Text] m) =>
-    M.Map ConfCryptElement LineNumber
+    Bool
+    -> M.Map ConfCryptElement LineNumber
     -> m ()
-writeFullContentsToBuffer contents =
-    traverse_ (tell . singleton . toDisplayLine) sortedLines
+writeFullContentsToBuffer wrap contents =
+    traverse_ (tell . singleton . toDisplayLine wrap) sortedLines
     where
         sortedLines = fmap fst . sortOn snd $ M.toList contents
         singleton x = [x]
 
 toDisplayLine ::
-    ConfCryptElement
+    Bool
+    -> ConfCryptElement
     -> T.Text
-toDisplayLine (CommentLine comment) = "# " <> comment
-toDisplayLine (SchemaLine (Schema name tpe)) = name <> " : " <> typeToOutputString tpe
-toDisplayLine (ParameterLine (ParamLine name val)) = name <> " = " <> val
+toDisplayLine _ (CommentLine comment) = "# " <> comment
+toDisplayLine _ (SchemaLine (Schema name tpe)) = name <> " : " <> typeToOutputString tpe
+toDisplayLine wrap (ParameterLine (ParamLine name val)) = name <> " = " <> if wrap then wrapEncryptedValue val else val
 
 
 -- | Because the encrypted results are stored as UTF8 text, its possible for an encrypted value
