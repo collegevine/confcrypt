@@ -42,13 +42,16 @@ library:
     - ConfCrypt.Commands
     - ConfCrypt.Encryption
   default-extensions: MultiParamTypeClasses OverloadedStrings FlexibleContexts FlexibleInstances NamedFieldPuns
-        TupleSections DeriveGeneric DeriveAnyClass FunctionalDependencies
+        TupleSections DeriveGeneric DeriveAnyClass FunctionalDependencies TypeApplications UndecidableInstances
 
 
 executables:
-  confcrypt-exe:
+  confcrypt:
     main:                Main.hs
     source-dirs:         app
+    other-modules:
+        - ConfCrypt.CLI.API
+        - ConfCrypt.CLI.Engine
     ghc-options:
     - -threaded
     - -rtsopts
@@ -57,7 +60,7 @@ executables:
     - confcrypt
     - optparse-applicative
     default-extensions: MultiParamTypeClasses OverloadedStrings FlexibleContexts FlexibleInstances NamedFieldPuns
-        TupleSections ExistentialQuantification
+        TupleSections ExistentialQuantification TypeApplications UndecidableInstances
 
 tests:
   confcrypt-test:

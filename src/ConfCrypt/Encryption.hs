@@ -21,6 +21,8 @@ import Crypto.Random.Types (MonadRandom)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import Data.Text as T
+import Data.Text.Encoding as T
+
 
 class KeyProjection key where
     project :: RSA.KeyPair -> key
@@ -69,7 +71,9 @@ decryptValue ::
     -> Either ConfCryptError T.Text
 decryptValue _ "" = Right ""
 decryptValue privateKey encryptedValue =
-    either (Left . DecryptionError) (Right . T.pack . BSC.unpack) $ decrypt Nothing privateKey (BSC.pack . T.unpack $ encryptedValue)
+    either (Left . DecryptionError)
+           (Right . T.decodeUtf8) $
+           decrypt Nothing privateKey (BSC.pack $ T.unpack encryptedValue)
 
 -- | Encrypt a
 encryptValue :: MonadRandom m =>
@@ -81,4 +85,4 @@ encryptValue publicKey nakedValue = do
     res <- encrypt publicKey bytes
     pure $ either (Left . EncryptionError) (Right . T.pack . BSC.unpack) res
     where
-        bytes = BSC.pack $ T.unpack nakedValue
+        bytes = T.encodeUtf8 nakedValue

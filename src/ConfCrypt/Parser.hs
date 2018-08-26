@@ -9,7 +9,7 @@ import Control.Applicative.Combinators (manyTill, many)
 import Data.Maybe (listToMaybe)
 import Text.Megaparsec (Parsec, parse, getPosition, SourcePos(..), unPos, (<?>), try, failure)
 import Text.Megaparsec.Char (char, space, eol, anyChar, string', digitChar, alphaNumChar,
-    oneOf, symbolChar, separatorChar, letterChar, digitChar)
+    oneOf, symbolChar, separatorChar, letterChar, digitChar, string)
 import qualified Data.Text as T
 import qualified Data.Map as M
 import qualified Data.Set as S
@@ -93,7 +93,7 @@ parseParameter = do
     name <- validName
     _ <- space
     _ <- char '='
-    _ <- space
+    _ <- char ' '
     value <- validValue
     _ <- many eol
     pure (ParameterLine ParamLine {pName= name, pValue = value}, lineNum)
@@ -108,4 +108,10 @@ validName =
 
 validValue :: Parser T.Text
 validValue =
-    T.pack <$> manyTill anyChar eol
+    try wrapped <|> try standard
+    where
+        wrapped = do
+            _ <- string "BEGIN"
+            value <- manyTill anyChar (string "END")
+            pure $ T.pack value
+        standard = T.pack <$> manyTill anyChar eol

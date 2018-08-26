@@ -27,21 +27,26 @@ explicitFiles = testGroup "specific test files" [
     testCase "default config" $ do
         let res = parseConfCrypt "default config" defaultConf
         isRight res @=? True
+
    ,testCase "empty config" $ do
         let res = parseConfCrypt "empty conf" ""
         isRight res @=? True
+
    ,testCase "all comments" $ do
         let res = parseConfCrypt "all comments" allComments
         isRight res @=? True
-   ,testCase "multiple line breaks" $ do
+
+    ,testCase "multiple line breaks" $ do
         let res = parseConfCrypt "line breaks" multipleLineBreaks
         isRight res @=? True
+
    ,testCase "requires a trailing newline" $ do
         let Right res = parseConfCrypt "No newline" "# {"
             Right res' = parseConfCrypt "No newline" "# {\n"
         M.size (fileContents res) @=? 0
         M.size (fileContents res') @=? 1
-    ,testCase "Can parse simple param schema pair" $ do
+
+  ,testCase "Can parse simple param schema pair" $ do
         let simplePair = "T : INT\n\
                          \T = D\n\
                          \Y : INT\n\
@@ -49,7 +54,8 @@ explicitFiles = testGroup "specific test files" [
             Right res = parseConfCrypt "simple pairs" simplePair
         M.size (fileContents res) @=? 4
         length (parameters res) @=? 2
-    ,testCase "Types are case insensitive" $ do
+
+   ,testCase "Types are case insensitive" $ do
         let simplePair = "T : InT\n\
                          \T = D\n\
                          \Y : int\n\
@@ -57,6 +63,13 @@ explicitFiles = testGroup "specific test files" [
             Right res = parseConfCrypt "simple pairs" simplePair
         M.size (fileContents res) @=? 4
         length (parameters res) @=? 2
+
+    ,testCase "Wrapped parameters are parsed" $ do
+        let res = parseConfCrypt "wrapped" wrappedParameter
+        param <- either (const $ assertFailure "Could not parse a wrapped parameter")
+                        (pure . head . parameters)
+                        res
+        (paramValue param) @=? "foobar"
     ]
 
 
@@ -98,3 +111,7 @@ multipleLineBreaks = "# For example:\n\n\n\
     \ USE_SSL = True\n\n\
     \ TIMEOUT_MS : Int\n\
     \ TIMEOUT_MS = 300"
+
+wrappedParameter:: T.Text
+wrappedParameter = "Test : String\n\
+    \Test = BEGINfoobarEND\n"

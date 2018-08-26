@@ -174,7 +174,7 @@ editCases = testGroup "edit" [
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
 
    ,testCase "supports alternative argument labels" $ do
-        let args =  ["add", "-k", "testKey", "-n", "test", "-t", "String", "-v", "foo", "test.econf"]
+        let args =  ["edit", "-k", "testKey", "-n", "test", "-t", "String", "-v", "foo", "test.econf"]
             res = execParserPure defaultPrefs cliParser args
         case res of
             Success (EC (KeyAndConf "testKey" "test.econf") (EditConfCrypt "test" "foo" CString)) -> assertBool "can't fail" True
