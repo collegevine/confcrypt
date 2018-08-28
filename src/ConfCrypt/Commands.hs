@@ -101,7 +101,21 @@ instance (Monad m, MonadRandom m) => Command EditConfCrypt (ConfCryptM m RSA.Pub
 data DeleteConfCrypt = DeleteConfCrypt {dName:: T.Text}
     deriving (Eq, Read, Show, Generic)
 instance (Monad m, MonadRandom m) => Command DeleteConfCrypt (ConfCryptM m ()) where
-    evaluate = undefined
+    evaluate DeleteConfCrypt {dName} = do
+        (ccFile, ()) <- ask
+
+        when (not . any ((==) dName . paramName) $ parameters ccFile) $
+            throwError $ UnknownParameter dName
+
+        let contents = fileContents ccFile
+            instructions = fmap (second (const Remove)) . M.toList $ M.filterWithKey findNamedLine contents
+
+        newcontents <- genNewFileState contents instructions
+        writeFullContentsToBuffer True newcontents
+        where
+            findNamedLine (SchemaLine Schema {sName}) _ = dName == sName
+            findNamedLine (ParameterLine ParamLine {pName}) _ = dName == pName
+            findNamedLine _ _ = False
 
 data ValidateConfCrypt = ValidateConfCrypt
 instance (Monad m) => Command ValidateConfCrypt (ConfCryptM m RSA.PrivateKey) where
