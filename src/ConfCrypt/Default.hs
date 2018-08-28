@@ -1,6 +1,7 @@
 module ConfCrypt.Default (
     defaultConf,
-    defaultLines
+    defaultLines,
+    emptyConfCryptFile
     ) where
 
 import ConfCrypt.Parser (parseConfCrypt)

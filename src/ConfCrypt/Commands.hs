@@ -10,6 +10,7 @@ module ConfCrypt.Commands (
     DeleteConfCrypt(..),
     ValidateConfCrypt(..),
     EncryptWholeConfCrypt(..),
+    NewConfCrypt(..),
 
     -- | Exported for testing
     genNewFileState,
@@ -129,9 +130,7 @@ instance (Monad m, MonadRandom m) => Command EncryptWholeConfCrypt (ConfCryptM m
 data NewConfCrypt = NewConfCrypt
 instance Monad m => Command NewConfCrypt (ConfCryptM m ()) where
     evaluate _ =
-        writeFullContentsToBuffer True =<< genNewFileState M.empty defaultAdd
-        where
-            defaultAdd = fmap (second (const Add)) . M.toList $ fileContents defaultLines
+        writeFullContentsToBuffer True (fileContents defaultLines)
 
 
 -- | Given a known file state and some edits, apply the edits and produce the new file contents

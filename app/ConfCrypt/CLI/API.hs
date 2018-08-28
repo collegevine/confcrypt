@@ -23,6 +23,7 @@ data AnyCommand
     | WC KeyAndConf
     | DC Conf DeleteConfCrypt
     | VC KeyAndConf
+    | NC
     deriving (Eq, Show)
 
 cliParser :: ParserInfo AnyCommand
@@ -46,6 +47,8 @@ commandParser = hsubparser $
         command "validate" validate
         <>
         command "encrypt" encrypt
+        <>
+        command "new" new
     )
 
 add :: ParserInfo AnyCommand
@@ -77,6 +80,11 @@ encrypt :: ParserInfo AnyCommand
 encrypt = info ( WC <$> keyAndConf)
            (progDesc "Encrypt an existing configuration file using the provided key." <>
             fullDesc)
+
+new :: ParserInfo AnyCommand
+new  = info (pure NC)
+            (progDesc "Produce a new boilerplate confcrypt file. This should be piped into your desired config." <>
+             fullDesc)
 
 keyAndConf :: Parser KeyAndConf
 keyAndConf =

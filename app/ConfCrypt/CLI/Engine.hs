@@ -6,6 +6,7 @@ import ConfCrypt.Types
 import ConfCrypt.Commands
 import ConfCrypt.Parser
 import ConfCrypt.Encryption
+import ConfCrypt.Default (emptyConfCryptFile)
 import ConfCrypt.CLI.API
 
 import Control.DeepSeq (force)
@@ -15,16 +16,17 @@ import Control.Monad.Writer (MonadWriter, WriterT, execWriterT)
 import Crypto.PubKey.RSA.Types (PublicKey, PrivateKey)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
-import Options.Applicative (execParserPure, defaultPrefs, ParserResult(..))
 import System.Exit (exitSuccess, exitFailure, exitWith, ExitCode(..))
 
 run ::
-    [String] -- ^ Command line arguments
+    AnyCommand  -- ^ Command line arguments
     -> IO [T.Text]
-run programArguments = do
-    parsedArguments <- either (\e -> print e *> exitFailure)
-                              pure
-                              (resToEither $ execParserPure defaultPrefs cliParser programArguments)
+run NC = do
+    res <- runConfCrypt emptyConfCryptFile $ evaluate NewConfCrypt
+    either (\e -> print e *> exitFailure)
+           pure
+           res
+run parsedArguments = do
     let filePath = confFilePath parsedArguments
     lines <- T.readFile filePath
     configParsingResults <- parseConfCrypt filePath <$> pure lines
@@ -45,6 +47,7 @@ run programArguments = do
                         runConfCrypt parsedConfiguration $ do
                             rsaKey <- loadRSAKey key
                             withReaderT (injectPubKey rsaKey) $ evaluate EncryptWholeConfCrypt
+
                     AC (KeyAndConf {key}) cmd ->
                         runConfCrypt parsedConfiguration $ do
                             rsaKey <- loadRSAKey key
@@ -61,10 +64,6 @@ run programArguments = do
         injectPubKey key (conf, _) = (conf, key)
         injectPrivateKey :: PrivateKey -> (ConfCryptFile, ()) -> (ConfCryptFile, PrivateKey)
         injectPrivateKey key (conf, _) = (conf, key)
-        resToEither (Success a) = Right a
-        resToEither (Failure _) = Left "Failed to parse cmd line args"
-        resToEither (CompletionInvoked _) = Left  "Completion not supported"
-
 
 runConfCrypt :: Monad m =>
     ConfCryptFile ->
