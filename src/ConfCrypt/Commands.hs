@@ -18,6 +18,7 @@ module ConfCrypt.Commands (
     FileAction(..)
     ) where
 
+import ConfCrypt.Default (defaultLines)
 import ConfCrypt.Types
 import ConfCrypt.Encryption (encryptValue, decryptValue)
 
@@ -124,6 +125,14 @@ instance (Monad m) => Command ValidateConfCrypt (ConfCryptM m RSA.PrivateKey) wh
 data EncryptWholeConfCrypt = EncryptWholeConfCrypt
 instance (Monad m, MonadRandom m) => Command EncryptWholeConfCrypt (ConfCryptM m RSA.PublicKey) where
     evaluate = undefined
+
+data NewConfCrypt = NewConfCrypt
+instance Monad m => Command NewConfCrypt (ConfCryptM m ()) where
+    evaluate _ =
+        writeFullContentsToBuffer True =<< genNewFileState M.empty defaultAdd
+        where
+            defaultAdd = fmap (second (const Add)) . M.toList $ fileContents defaultLines
+
 
 -- | Given a known file state and some edits, apply the edits and produce the new file contents
 genNewFileState :: (Monad m, MonadError ConfCryptError m) =>

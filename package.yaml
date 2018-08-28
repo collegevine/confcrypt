@@ -41,6 +41,7 @@ library:
     - ConfCrypt.Parser
     - ConfCrypt.Commands
     - ConfCrypt.Encryption
+    - ConfCrypt.Default
   default-extensions: MultiParamTypeClasses OverloadedStrings FlexibleContexts FlexibleInstances NamedFieldPuns
         TupleSections DeriveGeneric DeriveAnyClass FunctionalDependencies TypeApplications UndecidableInstances
 
