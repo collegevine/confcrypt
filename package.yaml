@@ -33,6 +33,7 @@ dependencies:
 - crypto-pubkey-openssh
 - crypto-pubkey-types
 - bytestring
+- base64-bytestring
 
 library:
   source-dirs: src

@@ -5,8 +5,6 @@ touch test.econf
 
 confcrypt add --key "/Users/ccoffey/.ssh/confcrypt" --name Test --type String --value Foobar test.econf > test.econf
 
-cat test.econf
-
 RES=$(confcrypt add --key "/Users/ccoffey/.ssh/confcrypt" --name Test2 --type Int --value 42 test.econf)
 echo "$RES" > test.econf
 

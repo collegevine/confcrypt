@@ -67,5 +67,16 @@ bufferWriteProperties  = testGroup "Buffer write" [
                   parseRes
     ]
 
+readTests :: TestTree
+readTests = testGroup "Read" [
+    testCase "reading produces decrypted results" $ do
+        assertFailure "Not Implemented"
+   ,testCase "reading requires a valid key" $
+        assertFailure "Not Implemented"
+   ,testCase "reading an empty file is an empty file" $
+        assertFailure "Not Implemented"
+   -- ,testProperty "read . encrypt . read == id" $ \x -> x == 0
+    ]
+
 isComment (CommentLine _) = True
 isComment _ = False

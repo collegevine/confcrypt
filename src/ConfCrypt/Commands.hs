@@ -70,7 +70,7 @@ instance (Monad m, MonadRandom m) => Command AddConfCrypt (ConfCryptM m RSA.Publ
         let contents = fileContents ccFile
             instructions = [(SchemaLine sl, Add), (ParameterLine (pl {pValue = encryptedValue}), Add)]
         newcontents <- genNewFileState contents instructions
-        writeFullContentsToBuffer True newcontents
+        writeFullContentsToBuffer False newcontents
         where
             (pl, Just sl) = parameterToLines $ Parameter {paramName = aName, paramValue = aValue, paramType = Just aType}
 
@@ -94,7 +94,7 @@ instance (Monad m, MonadRandom m) => Command EditConfCrypt (ConfCryptM m RSA.Pub
                             (ParameterLine (pl {pValue = encryptedValue}), Edit)
                            ]
         newcontents <- genNewFileState contents instructions
-        writeFullContentsToBuffer True newcontents
+        writeFullContentsToBuffer False newcontents
         where
             (pl, Just sl) = parameterToLines $ Parameter {paramName = eName, paramValue = eValue, paramType = Just eType}
 
@@ -113,7 +113,7 @@ instance (Monad m, MonadRandom m) => Command DeleteConfCrypt (ConfCryptM m ()) w
             instructions = fmap (second (const Remove)) . M.toList $ M.filterWithKey findNamedLine contents
 
         newcontents <- genNewFileState contents instructions
-        writeFullContentsToBuffer True newcontents
+        writeFullContentsToBuffer False newcontents
         where
             findNamedLine (SchemaLine Schema {sName}) _ = dName == sName
             findNamedLine (ParameterLine ParamLine {pName}) _ = dName == pName
@@ -130,7 +130,7 @@ instance (Monad m, MonadRandom m) => Command EncryptWholeConfCrypt (ConfCryptM m
 data NewConfCrypt = NewConfCrypt
 instance Monad m => Command NewConfCrypt (ConfCryptM m ()) where
     evaluate _ =
-        writeFullContentsToBuffer True (fileContents defaultLines)
+        writeFullContentsToBuffer False (fileContents defaultLines)
 
 
 -- | Given a known file state and some edits, apply the edits and produce the new file contents
@@ -185,6 +185,7 @@ toDisplayLine _ (SchemaLine (Schema name tpe)) = name <> " : " <> typeToOutputSt
 toDisplayLine wrap (ParameterLine (ParamLine name val)) = name <> " = " <> if wrap then wrapEncryptedValue val else val
 
 
+-- TODO remove this
 -- | Because the encrypted results are stored as UTF8 text, its possible for an encrypted value
 -- to embed end-of-line (eol) characters into the output value. This means rather than relying on eol
 -- as our delimeter we need to explicitly wrap encrypted values in something very unlikely to occur w/in

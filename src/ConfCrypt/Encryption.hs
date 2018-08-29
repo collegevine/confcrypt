@@ -20,6 +20,7 @@ import Crypto.PubKey.RSA.PKCS15 (encrypt, decrypt)
 import Crypto.Random.Types (MonadRandom)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
+import qualified Data.ByteString.Base64 as B64
 import Data.Text as T
 import Data.Text.Encoding as T
 
@@ -73,7 +74,7 @@ decryptValue _ "" = Right ""
 decryptValue privateKey encryptedValue =
     either (Left . DecryptionError)
            (Right . T.decodeUtf8) $
-           decrypt Nothing privateKey (BSC.pack $ T.unpack encryptedValue)
+           decrypt Nothing privateKey (B64.decodeLenient . BSC.pack $ T.unpack encryptedValue)
 
 -- | Encrypt a
 encryptValue :: MonadRandom m =>
@@ -83,6 +84,6 @@ encryptValue :: MonadRandom m =>
 encryptValue _ "" = pure $ Right ""
 encryptValue publicKey nakedValue = do
     res <- encrypt publicKey bytes
-    pure $ either (Left . EncryptionError) (Right . T.pack . BSC.unpack) res
+    pure $ either (Left . EncryptionError) (Right . T.pack . BSC.unpack . B64.encode) res
     where
         bytes = T.encodeUtf8 nakedValue
