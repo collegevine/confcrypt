@@ -85,5 +85,6 @@ tests:
     - QuickCheck
     - tasty-hunit
     - HUnit
+    - memory
     default-extensions: MultiParamTypeClasses OverloadedStrings FlexibleContexts FlexibleInstances NamedFieldPuns
         TupleSections

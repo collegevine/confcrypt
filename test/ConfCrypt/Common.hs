@@ -3,11 +3,14 @@ module ConfCrypt.Common where
 import ConfCrypt.Types
 
 import Control.Arrow
+import Control.Monad.Identity (Identity)
 import Data.Char (isAlphaNum, isPrint, isSpace, isAscii, isLatin1)
 import Data.List (nub)
+import Data.ByteArray (pack)
 import qualified Data.Map as M
 import qualified Data.Text as T
 import qualified Data.ByteString as BS
+import Crypto.Random (withDRG, drgNewSeed, seedFromInteger, MonadRandom(..))
 import Test.QuickCheck
 
 instance Arbitrary Parameter where
@@ -158,3 +161,6 @@ dangerousTestKey = "-----BEGIN RSA PRIVATE KEY-----\n\
 \q7RzVeUyT1tX9nhtG0qewfJwG+uiJegpFHiR8h/0Q1UeKDoPF5h7cEHHpEdIK6Jk\n\
 \EDnXHO70xbl3lTjZEMcGbEucW3dtciTnPpXGru/pu6EVBVETiyqe/uxnmBQ=\n\
 \-----END RSA PRIVATE KEY-----"
+
+instance MonadRandom Identity where
+    getRandomBytes n = pure . pack . BS.unpack $ BS.replicate n 42

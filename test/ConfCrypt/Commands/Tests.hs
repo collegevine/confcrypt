@@ -5,6 +5,7 @@ module ConfCrypt.Commands.Tests (
 import ConfCrypt.Types
 import ConfCrypt.Commands
 import ConfCrypt.Parser
+import ConfCrypt.Default
 import ConfCrypt.Encryption (unpackPrivateRSAKey, project)
 
 import ConfCrypt.Common
@@ -28,7 +29,8 @@ commandTests :: TestTree
 commandTests = testGroup "command tests" [
     modifyFileProperties,
     bufferWriteProperties,
-    readTests
+    readTests,
+    addTests
     ]
 
 modifyFileProperties :: TestTree
@@ -97,6 +99,50 @@ readTests = testGroup "Read" [
 
     -- TODO implement the 'Arbitrary' instance to make this rule possible
    -- ,testProperty "read . encrypt . read == id" $ \x -> x == 0
+    ]
+
+addTests :: TestTree
+addTests = testGroup "Add" [
+    testCase "add x [] == [x]" $ do
+        probablyKP <- runExceptT $ unpackPrivateRSAKey dangerousTestKey
+        publicKey <- either (assertFailure . show) (pure . project ) probablyKP :: IO RSA.PublicKey
+        let dummyAdd = AddConfCrypt  {aName= "Test", aValue = "Foo", aType = CString}
+            res = runIdentity . runExceptT . execWriterT $ runReaderT (evaluate dummyAdd) (emptyConfCryptFile, publicKey) :: Either ConfCryptError [T.Text]
+        case res of
+            Left e ->
+                assertFailure $ show e
+            Right lines ->
+                lines @=? ["Test : String" :: T.Text,"Test = y7wDxwsamscCOlqEcR0MgatspFf0NG0Wv32flD8cyh80tkN30g1iLlobxJhf/qfgm8ISRgtSSsxEsh5ujg7DS8d5oMhoFZcZnK0QuRcBDuoG8gRNiF1LHh4hhUJWksqdd8HNmuNHr45a97Alezj8GF8abTs3RoVCTV46PYmSP0avd0Oudfjn9iTF2C/q+S74fH64TSDKmgWrrexGpA07Yc8vjMW1MuFoS3NpONsuYwUr2pSCuvWCdfbs2ZfGqGG3CY0E/lfTJTOnw7J5HKelRuvE54Ey32bLLiSRd6Ot+O2WJLBGi0I0rkn0ZP3l9vP/URu9Wft4j3a/yLOeAM/NUmI/1SQrXjq8a1sTZGcC2+H4RfyLuV1sFPjTZ6zr/gWCasLgSRyRpvlX98H5GlPrjLPfHp493C2CiHljrSxXE8zvJO5/MXwenVqWShq7PXFGZs8NnwLMl6moXYGFJGooLKvslgSwNYX1BB15BJBhMbDIQoplTNhZUXgMhwJau5DBtWpt0x235vCRBK94Ryba8KLzWnIUKydSbdNGqNc0oaPhXOdGqSIex4PDwhepQ8c8+r/cyKBQDoGLS09q2Vx3ZPIAJYrsEreOH0PFRUIdkumBEXR9GdDot5MG0OmM29nHbuh86rDauXl2oXK/GWoqAq7yKNYAY/+JdpRhsDXP7lE="]
+
+   ,testCase "add x [x] == Error case" $ do
+        probablyKP <- runExceptT $ unpackPrivateRSAKey dangerousTestKey
+        publicKey <- either (assertFailure . show) (pure . project ) probablyKP :: IO RSA.PublicKey
+        let dummyAdd = AddConfCrypt  {aName= "Test", aValue = "Foo", aType = CString}
+            ccf = ConfCryptFile "containsX"
+                                (M.fromList [(SchemaLine Schema {sName= "Test", sType = CString},LineNumber 1),
+                                             (ParameterLine ParamLine {pName ="Test", pValue="Foo"},LineNumber 2)])
+                                [Parameter "Test" "Foo" ( Just CString )]
+            res = runIdentity . runExceptT . execWriterT $ runReaderT (evaluate dummyAdd) (ccf, publicKey) :: Either ConfCryptError [T.Text]
+        case res of
+            Left (WrongFileAction _) -> assertBool "hmm" True
+            _ -> assertFailure "Expected a WrongFileAction error"
+
+    ,testCase "add x [y] == [y,x] (ordering matters)" $ do
+        probablyKP <- runExceptT $ unpackPrivateRSAKey dangerousTestKey
+        publicKey <- either (assertFailure . show) (pure . project ) probablyKP :: IO RSA.PublicKey
+        let dummyAdd = AddConfCrypt  {aName= "Test", aValue = "Foo", aType = CString}
+            ccf = ConfCryptFile "containsY"
+                                (M.fromList [(SchemaLine Schema {sName= "Fizz", sType = CString},LineNumber 1),
+                                             (ParameterLine ParamLine {pName ="Fizz", pValue="Foo"},LineNumber 2)])
+                                [Parameter "Test" "Fizz" (Just CString)]
+            res = runIdentity . runExceptT . execWriterT $ runReaderT (evaluate dummyAdd) (ccf, publicKey) :: Either ConfCryptError [T.Text]
+        case res of
+            Left e ->
+                assertFailure $ show e
+            Right lines ->
+                lines @=? ["Fizz : String", "Fizz = Foo","Test : String" :: T.Text,"Test = y7wDxwsamscCOlqEcR0MgatspFf0NG0Wv32flD8cyh80tkN30g1iLlobxJhf/qfgm8ISRgtSSsxEsh5ujg7DS8d5oMhoFZcZnK0QuRcBDuoG8gRNiF1LHh4hhUJWksqdd8HNmuNHr45a97Alezj8GF8abTs3RoVCTV46PYmSP0avd0Oudfjn9iTF2C/q+S74fH64TSDKmgWrrexGpA07Yc8vjMW1MuFoS3NpONsuYwUr2pSCuvWCdfbs2ZfGqGG3CY0E/lfTJTOnw7J5HKelRuvE54Ey32bLLiSRd6Ot+O2WJLBGi0I0rkn0ZP3l9vP/URu9Wft4j3a/yLOeAM/NUmI/1SQrXjq8a1sTZGcC2+H4RfyLuV1sFPjTZ6zr/gWCasLgSRyRpvlX98H5GlPrjLPfHp493C2CiHljrSxXE8zvJO5/MXwenVqWShq7PXFGZs8NnwLMl6moXYGFJGooLKvslgSwNYX1BB15BJBhMbDIQoplTNhZUXgMhwJau5DBtWpt0x235vCRBK94Ryba8KLzWnIUKydSbdNGqNc0oaPhXOdGqSIex4PDwhepQ8c8+r/cyKBQDoGLS09q2Vx3ZPIAJYrsEreOH0PFRUIdkumBEXR9GdDot5MG0OmM29nHbuh86rDauXl2oXK/GWoqAq7yKNYAY/+JdpRhsDXP7lE="]
+
+
     ]
 
 isComment (CommentLine _) = True
