@@ -22,6 +22,7 @@ module ConfCrypt.Commands (
 import ConfCrypt.Default (defaultLines)
 import ConfCrypt.Types
 import ConfCrypt.Encryption (encryptValue, decryptValue)
+import ConfCrypt.Validation (runAllRules)
 
 import Control.Arrow (second)
 import Control.Monad (when)
@@ -121,7 +122,7 @@ instance (Monad m, MonadRandom m) => Command DeleteConfCrypt (ConfCryptM m ()) w
 
 data ValidateConfCrypt = ValidateConfCrypt
 instance (Monad m) => Command ValidateConfCrypt (ConfCryptM m RSA.PrivateKey) where
-    evaluate = undefined
+    evaluate _ = runAllRules
 
 data EncryptWholeConfCrypt = EncryptWholeConfCrypt
 instance (Monad m, MonadRandom m) => Command EncryptWholeConfCrypt (ConfCryptM m RSA.PublicKey) where

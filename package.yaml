@@ -1,6 +1,6 @@
 name:                confcrypt
 version:             0.1.0.0
-github:              "githubuser/confcrypt"
+github:              "https://github.com/collegevine/confcrypt"
 license:             MIT
 author:              "Chris Coffey"
 maintainer:          "chris@collegevine.com"
@@ -42,6 +42,7 @@ library:
     - ConfCrypt.Parser
     - ConfCrypt.Commands
     - ConfCrypt.Encryption
+    - ConfCrypt.Validation
     - ConfCrypt.Default
   default-extensions: MultiParamTypeClasses OverloadedStrings FlexibleContexts FlexibleInstances NamedFieldPuns
         TupleSections DeriveGeneric DeriveAnyClass FunctionalDependencies TypeApplications UndecidableInstances
