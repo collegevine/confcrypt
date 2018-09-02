@@ -67,11 +67,11 @@ instance {-# OVERLAPPING #-} Arbitrary (ValidSchema, Parameter) where
                                         paramType = Just $ sType s}
              )
 
-commentLineGen = fmap CommentLine <$> arbitrary `suchThat` (all printableNonEmpty)
+commentLineGen = fmap CommentLine <$> arbitrary `suchThat` all printableNonEmpty
 
 printableNonEmpty :: T.Text -> Bool
 printableNonEmpty line =
-    ((> 0) $ T.length line) && (all isPrint $ T.unpack line) && not (all isSpace $ T.unpack line)
+    (> 0) $ T.length line && all isPrint (T.unpack line) && not (all isSpace $ T.unpack line)
 
 instance Arbitrary ValidCCF where
     arbitrary = do

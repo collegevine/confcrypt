@@ -28,13 +28,13 @@ data AnyCommand
 
 cliParser :: ParserInfo AnyCommand
 cliParser = info (commandParser <**> helper)
-        (fullDesc <>
-        (header "confcrypt: a tool for sane configuration management") <>
-        (footer "confcrypt's documentation and source is avaiable at <TODO fill me in>")
-        )
+        fullDesc <>
+        header "confcrypt: a tool for sane configuration management" <>
+        footer "confcrypt's documentation and source is avaiable at <TODO fill me in>"
+
 
 commandParser :: Parser AnyCommand
-commandParser = hsubparser $
+commandParser = hsubparser
     (
         command "add" add
         <>

@@ -85,7 +85,7 @@ instance (Monad m, MonadRandom m) => Command EditConfCrypt (ConfCryptM m RSA.Pub
 
         -- Editing an existing parameter requires that the file is inplace. Its not difficult to fall back into
         -- 'add' behavior in the case where the parameter isn't present, but I'm not implementing that right now.
-        when (null . filter ((==) eName . paramName) $ parameters ccFile) $
+        unless ( any ((==) eName . paramName) $ parameters ccFile) $
             throwError $ UnknownParameter eName
 
         mEncryptedValue <- lift . lift . lift $ encryptValue pk eValue
@@ -107,7 +107,7 @@ instance (Monad m, MonadRandom m) => Command DeleteConfCrypt (ConfCryptM m ()) w
     evaluate DeleteConfCrypt {dName} = do
         (ccFile, ()) <- ask
 
-        when (not . any ((==) dName . paramName) $ parameters ccFile) $
+        unless (any ((==) dName . paramName) $ parameters ccFile) $
             throwError $ UnknownParameter dName
 
         let contents = fileContents ccFile

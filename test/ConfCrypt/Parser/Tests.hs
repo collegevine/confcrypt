@@ -69,7 +69,7 @@ explicitFiles = testGroup "specific test files" [
         param <- either (const $ assertFailure "Could not parse a wrapped parameter")
                         (pure . head . parameters)
                         res
-        (paramValue param) @=? "foobar"
+        paramValue param @=? "foobar"
     ]
 
 

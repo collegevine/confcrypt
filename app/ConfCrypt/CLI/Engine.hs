@@ -35,30 +35,30 @@ run parsedArguments = do
         Left err -> print err *> exitFailure
         Right parsedConfiguration -> do
             result <- case parsedArguments of
-                    RC (KeyAndConf {key}) ->
+                    RC eyAndConf {key} ->
                         runConfCrypt parsedConfiguration $ do
                             rsaKey <- loadRSAKey key
                             withReaderT (injectPrivateKey rsaKey) $ evaluate ReadConfCrypt
-                    VC (KeyAndConf {key}) ->
+                    VC KeyAndConf {key} ->
                         runConfCrypt parsedConfiguration $ do
                             rsaKey <- loadRSAKey key
                             withReaderT (injectPrivateKey rsaKey) $ evaluate ValidateConfCrypt
-                    WC (KeyAndConf {key}) ->
+                    WC KeyAndConf {key} ->
                         runConfCrypt parsedConfiguration $ do
                             rsaKey <- loadRSAKey key
                             withReaderT (injectPubKey rsaKey) $ evaluate EncryptWholeConfCrypt
 
-                    AC (KeyAndConf {key}) cmd ->
+                    AC KeyAndConf {key} cmd ->
                         runConfCrypt parsedConfiguration $ do
                             rsaKey <- loadRSAKey key
                             withReaderT (injectPubKey rsaKey) $ evaluate cmd
-                    EC (KeyAndConf {key}) cmd ->
+                    EC KeyAndConf {key} cmd ->
                         runConfCrypt parsedConfiguration $ do
                             rsaKey <- loadRSAKey key
                             withReaderT (injectPubKey rsaKey) $ evaluate cmd
                     DC _ cmd ->
                         runConfCrypt parsedConfiguration $ evaluate cmd
-            either (\e -> print e *> exitFailure) pure $ result
+            either (\e -> print e *> exitFailure) pure result
     where
         injectPubKey :: PublicKey -> (ConfCryptFile, ()) -> (ConfCryptFile, PublicKey)
         injectPubKey key (conf, _) = (conf, key)

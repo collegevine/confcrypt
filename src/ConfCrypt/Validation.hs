@@ -32,7 +32,7 @@ parameterTypesMatchSchema :: (Monad m, MonadWriter [T.Text] m) =>
     RSA.PrivateKey
     -> ConfCryptFile
     -> m ()
-parameterTypesMatchSchema privateKey (ConfCryptFile {parameters}) =
+parameterTypesMatchSchema privateKey ConfCryptFile {parameters} =
     traverse_ decryptAndCompare parameters
     where
         decryptAndCompare Parameter {paramName, paramValue, paramType} =

@@ -28,8 +28,8 @@ parseConfCrypt filename contents =
         Left err -> Left $ ParserError (T.pack $ show err)
         Right rawLines -> Right $ assembleConfCrypt rawLines
     where
-        findParamSchema lines (ParamLine {pName}) = listToMaybe . fmap fst . M.toList $ M.filterWithKey (\s _ ->
-            (Just True) == (((==) pName . sName) <$> unWrapSchema s) ) lines
+        findParamSchema lines ParamLine {pName} = listToMaybe . fmap fst . M.toList $ M.filterWithKey (\s _ ->
+            Just True == ((==) pName . sName <$> unWrapSchema s) ) lines
         assembleConfCrypt :: [(ConfCryptElement, LineNumber)] -> ConfCryptFile
         assembleConfCrypt assocList = let
             contentsMap = M.fromList assocList
@@ -63,10 +63,7 @@ parseComment = do
 
 parseSchema :: Parser (ConfCryptElement, LineNumber)
 parseSchema = do
-    lineNum <- parseLineNum
-    _ <- space
-    name <- validName
-    _ <- space
+    name <- beginsWithName
     _ <- char ':'
     _ <- char ' '
     tpe <- parseType
@@ -88,15 +85,20 @@ parseType = let
 
 parseParameter :: Parser (ConfCryptElement, LineNumber)
 parseParameter = do
-    lineNum <- parseLineNum
-    _ <- space
-    name <- validName
-    _ <- space
+    name <- beginsWithName
     _ <- char '='
     _ <- char ' '
     value <- validValue
     _ <- many eol
     pure (ParameterLine ParamLine {pName= name, pValue = value}, lineNum)
+
+beginsWithName :: Parser T.Text
+beginsWithName = do
+    lineNum <- parseLineNum
+    _ <- space
+    name <- validName
+    _ <- space
+    pure name
 
 parseLineNum :: Parser LineNumber
 parseLineNum =
@@ -104,7 +106,7 @@ parseLineNum =
 
 validName :: Parser T.Text
 validName =
-    T.pack <$> many (letterChar <|> digitChar <|> (char '_'))
+    T.pack <$> many (letterChar <|> digitChar <|> char '_')
 
 validValue :: Parser T.Text
 validValue =

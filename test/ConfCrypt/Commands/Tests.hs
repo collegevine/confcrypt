@@ -50,13 +50,11 @@ modifyFileProperties = testGroup "modify file properties" [
    ,testProperty "genNewFileState [] additions == additions" $ \paramPairs -> let
         schemata = SchemaLine . fst <$> paramPairs
         params = (\p -> ParameterLine $ ParamLine (paramName p) (paramValue p)) . snd <$> paramPairs
-        edits =  (,Add) <$> (nub $ schemata <> params)
+        edits =  (,Add) <$> nub (schemata <> params)
         res = runExcept $ genNewFileState M.empty edits
-        in if null edits
-           then True
-           else either (const False)
-                       (\m -> (length edits) == (M.size m)) -- rather weak check
-                       res
+        in null edits || either (const False)
+                                (\m -> length edits == M.size m) -- rather weak check
+                                res
 
     ]
 
@@ -75,10 +73,7 @@ readTests :: TestTree
 readTests = testGroup "Read" [
     testCase "reading produces decrypted results" $ do
         let testLines = parseConfCrypt "test file" testFile
-        probablyKP <- runExceptT $ unpackPrivateRSAKey dangerousTestKey
-        privateKey <- either (assertFailure . show) (pure . project ) probablyKP :: IO RSA.PrivateKey
-        ccf <- either (assertFailure . show) pure testLines
-        let res = runIdentity . runExceptT . execWriterT $ runReaderT (evaluate ReadConfCrypt) (ccf, privateKey) :: Either ConfCryptError [T.Text]
+        res <- getReadResult testLines
         case res of
             Left e ->
                 assertFailure $ show e
@@ -87,10 +82,7 @@ readTests = testGroup "Read" [
 
    ,testCase "reading an empty file is an empty file" $ do
         let testLines = parseConfCrypt "empty test file" "# just a comment"
-        probablyKP <- runExceptT $ unpackPrivateRSAKey dangerousTestKey
-        privateKey <- either (assertFailure . show) (pure . project ) probablyKP :: IO RSA.PrivateKey
-        ccf <- either (assertFailure . show) pure testLines
-        let res = runIdentity . runExceptT . execWriterT $ runReaderT (evaluate ReadConfCrypt) (ccf, privateKey) :: Either ConfCryptError [T.Text]
+        res <- getReadResult testLines
         case res of
             Left e ->
                 assertFailure $ show e
@@ -100,6 +92,13 @@ readTests = testGroup "Read" [
     -- TODO implement the 'Arbitrary' instance to make this rule possible
    -- ,testProperty "read . encrypt . read == id" $ \x -> x == 0
     ]
+    where
+        getReadResult testLines = do
+            probablyKP <- runExceptT $ unpackPrivateRSAKey dangerousTestKey
+            privateKey <- either (assertFailure . show) (pure . project ) probablyKP :: IO RSA.PrivateKey
+            ccf <- either (assertFailure . show) pure testLines
+            pure $ runIdentity . runExceptT . execWriterT $ runReaderT (evaluate ReadConfCrypt) (ccf, privateKey) :: Either ConfCryptError [T.Text]
+
 
 addTests :: TestTree
 addTests = testGroup "Add" [

@@ -13,11 +13,11 @@ import Test.Tasty.HUnit
 defaultInfoTests :: TestTree
 defaultInfoTests = testGroup "defaults" [
     testCase "defaultLines represents the proper file" $ do
-        (parameters defaultLines) @=? [
+        parameters defaultLines @=? [
             Parameter {paramName = "DB_CONN_STR", paramValue = "Connection String", paramType = Just CString},
             Parameter {paramName = "USE_SSL", paramValue = "True", paramType = Just CBoolean}
             ]
-        (fileContents defaultLines) @=? M.fromList [
+        fileContents defaultLines @=? M.fromList [
             (CommentLine {cText = "  comment := # String"},LineNumber 9),
             (CommentLine {cText = "  confname := [a-z,A-Z,_,0-9]"},LineNumber 6),
             (CommentLine {cText = "  term := confname : type"},LineNumber 5),
