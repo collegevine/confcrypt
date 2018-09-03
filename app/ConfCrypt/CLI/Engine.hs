@@ -35,7 +35,7 @@ run parsedArguments = do
         Left err -> print err *> exitFailure
         Right parsedConfiguration -> do
             result <- case parsedArguments of
-                    RC eyAndConf {key} ->
+                    RC KeyAndConf {key} ->
                         runConfCrypt parsedConfiguration $ do
                             rsaKey <- loadRSAKey key
                             withReaderT (injectPrivateKey rsaKey) $ evaluate ReadConfCrypt
@@ -73,9 +73,9 @@ runConfCrypt file action =
      runExceptT . execWriterT $ runReaderT action (file, ())
 
 confFilePath :: AnyCommand -> FilePath
-confFilePath  (RC (KeyAndConf {conf})) = conf
-confFilePath  (WC (KeyAndConf {conf})) = conf
-confFilePath  (VC (KeyAndConf {conf})) = conf
-confFilePath  (AC (KeyAndConf {conf}) _) = conf
-confFilePath  (EC (KeyAndConf {conf}) _) = conf
+confFilePath  (RC KeyAndConf {conf}) = conf
+confFilePath  (WC KeyAndConf {conf}) = conf
+confFilePath  (VC KeyAndConf {conf}) = conf
+confFilePath  (AC KeyAndConf {conf} _) = conf
+confFilePath  (EC KeyAndConf {conf} _) = conf
 confFilePath  (DC (Conf conf) _) = conf

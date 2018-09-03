@@ -25,7 +25,7 @@ import ConfCrypt.Encryption (encryptValue, decryptValue)
 import ConfCrypt.Validation (runAllRules)
 
 import Control.Arrow (second)
-import Control.Monad (when)
+import Control.Monad (unless)
 import Control.Monad.Trans (lift)
 import Control.Monad.Reader (ask)
 import Control.Monad.Except (throwError, MonadError)

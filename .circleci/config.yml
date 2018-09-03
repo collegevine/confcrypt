@@ -17,15 +17,15 @@ jobs:
     - checkout
     - run: mkdir -p $CIRCLE_ARTIFACTS $CIRCLE_TEST_REPORTS
 
-    # Install libsysconfcpus, which allows us to intercept calls from psc -> host OS and return the number of available cores rather
-    # than the total number of host cores. ie. run our buil w/ the allowed 2 cores, instead of the
+    # Install libsysconfcpus, which allows us to intercept calls from ghc -> host OS and return the number of available cores rather
+    # than the total number of host cores. ie. run the build w/ the allowed 2 cores, instead of 32 or whatever the host indicates.
     - run: if [ ! -d sysconfcpus/bin ];
            then
                 buildDir=pwd
                 git clone https://github.com/obmarg/libsysconfcpus.git;
                 cd libsysconfcpus ;
                 ./configure;
-                sudo make && sudo make install;
+                make && make install;
                 cd ..;
            fi
 
@@ -38,9 +38,8 @@ jobs:
         # Any branch if there are none on the default branch - this should be unnecessary if you have your default branch configured correctly
         - circle20-
 
-    # The actual build step
     - run:
-        command: sysconfcpus -n 2 ./ stack test
+        command: sysconfcpus -n 2 stack test
         no_output_timeout: 3600s
 
     - store_test_results:

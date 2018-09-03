@@ -93,11 +93,12 @@ readTests = testGroup "Read" [
    -- ,testProperty "read . encrypt . read == id" $ \x -> x == 0
     ]
     where
+        getReadResult :: Either ConfCryptError ConfCryptFile -> IO (Either ConfCryptError [T.Text])
         getReadResult testLines = do
             probablyKP <- runExceptT $ unpackPrivateRSAKey dangerousTestKey
             privateKey <- either (assertFailure . show) (pure . project ) probablyKP :: IO RSA.PrivateKey
             ccf <- either (assertFailure . show) pure testLines
-            pure $ runIdentity . runExceptT . execWriterT $ runReaderT (evaluate ReadConfCrypt) (ccf, privateKey) :: Either ConfCryptError [T.Text]
+            pure $ runIdentity . runExceptT . execWriterT $ runReaderT (evaluate ReadConfCrypt) (ccf, privateKey) :: IO (Either ConfCryptError [T.Text])
 
 
 addTests :: TestTree

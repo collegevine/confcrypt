@@ -63,7 +63,7 @@ parseComment = do
 
 parseSchema :: Parser (ConfCryptElement, LineNumber)
 parseSchema = do
-    name <- beginsWithName
+    (lineNum, name) <- beginsWithName
     _ <- char ':'
     _ <- char ' '
     tpe <- parseType
@@ -85,20 +85,20 @@ parseType = let
 
 parseParameter :: Parser (ConfCryptElement, LineNumber)
 parseParameter = do
-    name <- beginsWithName
+    (lineNum, name) <- beginsWithName
     _ <- char '='
     _ <- char ' '
     value <- validValue
     _ <- many eol
     pure (ParameterLine ParamLine {pName= name, pValue = value}, lineNum)
 
-beginsWithName :: Parser T.Text
+beginsWithName :: Parser (LineNumber, T.Text)
 beginsWithName = do
     lineNum <- parseLineNum
     _ <- space
     name <- validName
     _ <- space
-    pure name
+    pure (lineNum, name)
 
 parseLineNum :: Parser LineNumber
 parseLineNum =
