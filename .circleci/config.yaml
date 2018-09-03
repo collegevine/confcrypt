@@ -1,0 +1,63 @@
+defaults: &defaults
+    working_directory: ~/collegevine/confcrypt
+    parallelism: 1
+
+    environment:
+      CIRCLE_ARTIFACTS: /tmp/circleci-artifacts        # Came from Circle's own translation utility, not sure if really needed
+      CIRCLE_TEST_REPORTS: /tmp/circleci-test-results  # Came from Circle's own translation utility, not sure if really needed
+
+    docker:
+    - image: haskell:8.4.3
+
+version: 2
+jobs:
+  test-job:
+    <<: *defaults
+    steps:
+    - checkout
+    - run: mkdir -p $CIRCLE_ARTIFACTS $CIRCLE_TEST_REPORTS
+
+    # Install libsysconfcpus, which allows us to intercept calls from psc -> host OS and return the number of available cores rather
+    # than the total number of host cores. ie. run our buil w/ the allowed 2 cores, instead of the
+    - run: if [ ! -d sysconfcpus/bin ];
+           then
+                buildDir=pwd
+                git clone https://github.com/obmarg/libsysconfcpus.git;
+                cd libsysconfcpus ;
+                ./configure;
+                sudo make && sudo make install;
+                cd ..;
+           fi
+
+    - restore_cache:
+        keys:
+        # This branch if available
+        - circle20-{{ .Branch }}-
+        # Default branch if not
+        - circle20-master-
+        # Any branch if there are none on the default branch - this should be unnecessary if you have your default branch configured correctly
+        - circle20-
+
+    # The actual build step
+    - run:
+        command: sysconfcpus -n 2 ./ stack test
+        no_output_timeout: 3600s
+
+    - store_test_results:
+        path: $CIRCLE_ARTIFACTS
+    - store_artifacts:
+        path: $CIRCLE_ARTIFACTS
+    - store_artifacts:
+        path: $CIRCLE_TEST_REPORTS
+  lint-job:
+      <<: *defaults
+      steps:
+      - checkout
+      - run: source hlint.sh
+workflows:
+    version: 2
+
+    build-and-test:
+        jobs:
+            - test-job
+            - lint-job
