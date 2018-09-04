@@ -1,6 +1,8 @@
 # confcrypt
 As soon as an application is deployed or built on more than a single machine, you tend to start worrying about managing the configuration. There are a number of ways to approach this problem, but ultimately there's a need to protect sentisive inforamtion like database password and api tokens. While you can always store those directly in a config management system like AWS' Parameter Store, doing so means you can't track configuration chagnes in source control. This application provides yet another simple and straightforward means of hiding config information within source control.
 
+[![CircleCI](https://circleci.com/gh/collegevine/confcrypt/tree/master.svg?style=svg)](https://circleci.com/gh/collegevine/confcrypt/tree/master)
+
 ## Installing confcrypt
 #### Mac OSX
 
