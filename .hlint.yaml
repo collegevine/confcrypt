@@ -1,0 +1,4 @@
+- ignore: { name: "Redundant evaluate" }
+- ignore: { name: "Use newtype instead of data" }
+- ignore: { name: "Parse error" }
+- ignore: { name: "Redundant bracket", within: [ConfCrypt.CLI.API]}
