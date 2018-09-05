@@ -10,6 +10,7 @@ module ConfCrypt.Validation (
 import ConfCrypt.Types
 import ConfCrypt.Encryption (decryptValue)
 
+import Control.Monad.Except (runExcept)
 import Control.Monad.Writer (MonadWriter, tell)
 import Control.Monad.Reader (MonadReader, ask)
 import Data.Char (isDigit)
@@ -36,7 +37,7 @@ parameterTypesMatchSchema privateKey ConfCryptFile {parameters} =
     traverse_ decryptAndCompare parameters
     where
         decryptAndCompare Parameter {paramName, paramValue, paramType} =
-            case decryptValue privateKey paramValue of
+            case runExcept (decryptValue privateKey paramValue) of
                 Left _ -> tell ["Error: Could not decrypt " <> paramName]
                 Right val ->
                     case paramType of
