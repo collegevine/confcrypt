@@ -48,6 +48,7 @@ library:
         TupleSections DeriveGeneric DeriveAnyClass FunctionalDependencies TypeApplications UndecidableInstances
 
 
+
 executables:
   confcrypt:
     main:                Main.hs

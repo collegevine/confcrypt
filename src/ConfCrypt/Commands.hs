@@ -28,7 +28,7 @@ import Control.Arrow (second)
 import Control.Monad (unless)
 import Control.Monad.Trans (lift)
 import Control.Monad.Reader (ask)
-import Control.Monad.Except (throwError, MonadError)
+import Control.Monad.Except (throwError, runExcept, MonadError)
 import Control.Monad.Writer (tell, MonadWriter)
 import Crypto.Random (MonadRandom)
 import Data.Foldable (foldrM, traverse_)
@@ -53,7 +53,7 @@ instance Monad m => Command ReadConfCrypt (ConfCryptM m RSA.PrivateKey) where
     evaluate _ = do
         (ccFile, pk) <- ask
         let params = parameters ccFile
-        transformed <- mapM (\p -> decryptedParam  p $ decryptValue pk (paramValue p)) params
+        transformed <- mapM (\p -> decryptedParam  p . runExcept $ decryptValue pk (paramValue p)) params
         let transformedLines = [(p, Edit)| p <- transformed]
         newcontents <- genNewFileState (fileContents ccFile) transformedLines
         writeFullContentsToBuffer False newcontents
@@ -66,8 +66,8 @@ data AddConfCrypt = AddConfCrypt {aName :: T.Text, aValue :: T.Text, aType :: Sc
 instance (Monad m, MonadRandom m) => Command AddConfCrypt (ConfCryptM m RSA.PublicKey) where
     evaluate AddConfCrypt {aName, aValue, aType} =  do
         (ccFile, pubKey) <- ask
-        mEncryptedValue <- lift . lift . lift $ encryptValue pubKey aValue
-        encryptedValue <- either throwError pure mEncryptedValue
+        rawEncrypted <- lift . lift . lift $ encryptValue pubKey aValue
+        encryptedValue <- either throwError pure rawEncrypted
         let contents = fileContents ccFile
             instructions = [(SchemaLine sl, Add), (ParameterLine (pl {pValue = encryptedValue}), Add)]
         newcontents <- genNewFileState contents instructions
@@ -88,8 +88,8 @@ instance (Monad m, MonadRandom m) => Command EditConfCrypt (ConfCryptM m RSA.Pub
         unless ( any ((==) eName . paramName) $ parameters ccFile) $
             throwError $ UnknownParameter eName
 
-        mEncryptedValue <- lift . lift . lift $ encryptValue pk eValue
-        encryptedValue <- either throwError pure mEncryptedValue
+        rawEncrypted <- lift . lift . lift $ encryptValue pk eValue
+        encryptedValue <- either throwError pure rawEncrypted
         let contents = fileContents ccFile
             instructions = [(SchemaLine sl, Edit),
                             (ParameterLine (pl {pValue = encryptedValue}), Edit)
