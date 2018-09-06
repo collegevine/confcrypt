@@ -14,6 +14,7 @@ import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.Tasty.HUnit
 import Test.QuickCheck (NonEmptyList(..), ioProperty)
+import qualified Crypto.PubKey.RSA.Types as RSA
 import Crypto.Types.PubKey.RSA
 import Crypto.Random
 import qualified Data.Text as T
@@ -27,8 +28,9 @@ encryptionTests = testGroup "encryption" [
         in case runExcept (unpackPrivateRSAKey dangerousTestKey) of
                 Left err -> False
                 Right keyPair -> let
-                    (encrypted, _) = withDRG drg $ encryptValue (project keyPair) value
-                    decrypted = decryptValue (project keyPair) =<< encrypted
+                    (rawEncrypted, _) = withDRG drg $ encryptValue (project keyPair :: RSA.PublicKey) value
+                    encrypted = either (error "fail to encrypt") id rawEncrypted
+                    decrypted = runExcept $ decryptValue (project keyPair :: RSA.PrivateKey) encrypted
                     in either (const False)
                               (== value)
                               decrypted
@@ -36,8 +38,9 @@ encryptionTests = testGroup "encryption" [
         case runExcept (unpackPrivateRSAKey dangerousTestKey) of
             Left err -> assertFailure "Could not unpack RSA Key"
             Right keyPair -> do
-                encrypted <- encryptValue (project keyPair) "Foobar"
-                let decrypted = decryptValue (project keyPair) =<< encrypted
+                rawEncrypted <- encryptValue (project keyPair :: RSA.PublicKey) "Foobar"
+                encrypted <- either (const $ assertFailure "Could not enrypt") pure rawEncrypted
+                let decrypted = runExcept $ decryptValue (project keyPair :: RSA.PrivateKey) encrypted
                 either (const (assertFailure "Could not decrypt"))
                        (@=? "Foobar")
                        decrypted

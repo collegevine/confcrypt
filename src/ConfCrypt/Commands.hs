@@ -66,7 +66,8 @@ data AddConfCrypt = AddConfCrypt {aName :: T.Text, aValue :: T.Text, aType :: Sc
 instance (Monad m, MonadRandom m) => Command AddConfCrypt (ConfCryptM m RSA.PublicKey) where
     evaluate AddConfCrypt {aName, aValue, aType} =  do
         (ccFile, pubKey) <- ask
-        encryptedValue <- lift . lift $ encryptValue pubKey aValue
+        rawEncrypted <- lift . lift . lift $ encryptValue pubKey aValue
+        encryptedValue <- either throwError pure rawEncrypted
         let contents = fileContents ccFile
             instructions = [(SchemaLine sl, Add), (ParameterLine (pl {pValue = encryptedValue}), Add)]
         newcontents <- genNewFileState contents instructions
@@ -87,7 +88,8 @@ instance (Monad m, MonadRandom m) => Command EditConfCrypt (ConfCryptM m RSA.Pub
         unless ( any ((==) eName . paramName) $ parameters ccFile) $
             throwError $ UnknownParameter eName
 
-        encryptedValue <- lift . lift $ encryptValue pk eValue
+        rawEncrypted <- lift . lift . lift $ encryptValue pk eValue
+        encryptedValue <- either throwError pure rawEncrypted
         let contents = fileContents ccFile
             instructions = [(SchemaLine sl, Edit),
                             (ParameterLine (pl {pValue = encryptedValue}), Edit)

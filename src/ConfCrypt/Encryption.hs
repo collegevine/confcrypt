@@ -101,15 +101,15 @@ instance MonadDecrypt (Except ConfCryptError) RSA.PrivateKey where
             (pure . T.decodeUtf8) $
             decrypt Nothing privateKey (B64.decodeLenient . BSC.pack $ T.unpack encryptedValue)
 
-class (Monad m, MonadError ConfCryptError m, MonadRandom m) => MonadEncrypt m k where
-    encryptValue :: k -> T.Text -> m T.Text
+class (Monad m, MonadRandom m) => MonadEncrypt m k where
+    encryptValue :: k -> T.Text -> m (Either ConfCryptError T.Text)
 
-instance (Monad m, MonadRandom m) => MonadEncrypt (ExceptT ConfCryptError m) RSA.PublicKey where
-    encryptValue _ "" = pure ""
+instance (Monad m, MonadRandom m) => MonadEncrypt m RSA.PublicKey where
+    encryptValue _ "" = pure $ Right ""
     encryptValue publicKey nakedValue = do
-        res <- lift $ encrypt publicKey bytes
-        either (throwError . EncryptionError)
-               (pure . T.pack . BSC.unpack . B64.encode)
+        res <- encrypt publicKey bytes
+        pure $ either (Left . EncryptionError)
+               (Right . T.pack . BSC.unpack . B64.encode)
                res
         where
             bytes = T.encodeUtf8 nakedValue
