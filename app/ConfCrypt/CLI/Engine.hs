@@ -9,7 +9,9 @@ import ConfCrypt.Encryption
 import ConfCrypt.Default (emptyConfCryptFile)
 import ConfCrypt.CLI.API
 
+import Conduit (ResourceT, runResourceT)
 import Control.DeepSeq (force)
+import Control.Monad.Trans (MonadIO)
 import Control.Monad.Reader (MonadReader, ReaderT, runReaderT, withReaderT)
 import Control.Monad.Except (MonadError, ExceptT, runExceptT)
 import Control.Monad.Writer (MonadWriter, WriterT, execWriterT)
@@ -65,12 +67,12 @@ run parsedArguments = do
         injectPrivateKey :: PrivateKey -> (ConfCryptFile, ()) -> (ConfCryptFile, PrivateKey)
         injectPrivateKey key (conf, _) = (conf, key)
 
-runConfCrypt :: Monad m =>
+runConfCrypt ::
     ConfCryptFile ->
-    ConfCryptM m () a
-    -> m (Either ConfCryptError [T.Text])
+    ConfCryptM IO () a
+    -> IO (Either ConfCryptError [T.Text])
 runConfCrypt file action =
-     runExceptT . execWriterT $ runReaderT action (file, ())
+     runResourceT . runExceptT . execWriterT  $ runReaderT action (file, ())
 
 confFilePath :: AnyCommand -> FilePath
 confFilePath  (RC KeyAndConf {conf}) = conf

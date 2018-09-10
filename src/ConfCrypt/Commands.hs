@@ -23,6 +23,7 @@ import ConfCrypt.Default (defaultLines)
 import ConfCrypt.Types
 import ConfCrypt.Encryption (encryptValue, decryptValue)
 import ConfCrypt.Validation (runAllRules)
+import ConfCrypt.Providers.AWS (AWSCtx)
 
 import Control.Arrow (second)
 import Control.Monad (unless)
@@ -54,12 +55,25 @@ instance Monad m => Command ReadConfCrypt (ConfCryptM m RSA.PrivateKey) where
         (ccFile, pk) <- ask
         let params = parameters ccFile
         transformed <- mapM (\p -> decryptedParam  p . runExcept $ decryptValue pk (paramValue p)) params
-        let transformedLines = [(p, Edit)| p <- transformed]
-        newcontents <- genNewFileState (fileContents ccFile) transformedLines
-        writeFullContentsToBuffer False newcontents
+        processReadLines transformed ccFile
         where
             decryptedParam param (Left e) = throwError e
             decryptedParam param (Right v) = pure . ParameterLine $ ParamLine {pName = paramName param, pValue = v}
+
+ -- TODO reduce the duplication
+instance Command ReadConfCrypt (ConfCryptM IO AWSCtx) where
+    evaluate _ = do
+        (ccFile, pk) <- ask
+        let params = parameters ccFile
+        transformed <- mapM (\p -> decryptedParam  p <$> decryptValue pk (paramValue p)) params
+        processReadLines transformed ccFile
+        where
+            decryptedParam param v = ParameterLine $ ParamLine {pName = paramName param, pValue = v}
+
+processReadLines transformed ccFile =
+        writeFullContentsToBuffer False =<<  genNewFileState (fileContents ccFile) transformedLines
+    where
+    transformedLines = [(p, Edit)| p <- transformed]
 
 data AddConfCrypt = AddConfCrypt {aName :: T.Text, aValue :: T.Text, aType :: SchemaType}
     deriving (Eq, Read, Show, Generic)

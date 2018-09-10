@@ -34,6 +34,10 @@ dependencies:
 - crypto-pubkey-types
 - bytestring
 - base64-bytestring
+- amazonka
+- amazonka-kms
+- lens
+- conduit
 
 library:
   source-dirs: src
@@ -44,6 +48,7 @@ library:
     - ConfCrypt.Encryption
     - ConfCrypt.Validation
     - ConfCrypt.Default
+    - ConfCrypt.Providers.AWS
   default-extensions: MultiParamTypeClasses OverloadedStrings FlexibleContexts FlexibleInstances NamedFieldPuns
         TupleSections DeriveGeneric DeriveAnyClass FunctionalDependencies TypeApplications UndecidableInstances
 
@@ -69,7 +74,9 @@ executables:
 tests:
   confcrypt-test:
     main:                Tests.hs
-    source-dirs:         test, app
+    source-dirs:
+        - test
+        - app
     other-modules:
         ConfCrypt.Parser.Tests,
         ConfCrypt.Commands.Tests,

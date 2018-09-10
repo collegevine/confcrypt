@@ -1,5 +1,6 @@
 module ConfCrypt.Types where
 
+import Conduit (ResourceT)
 import Control.Monad.Reader (MonadReader, ReaderT, runReaderT)
 import Control.Monad.Except (MonadError, ExceptT, runExceptT)
 import Control.Monad.Writer (MonadWriter, WriterT, execWriterT)
@@ -9,7 +10,13 @@ import GHC.Generics (Generic)
 import qualified Data.Text as T
 import qualified Data.Map.Strict as M
 
-type ConfCryptM m ctx = ReaderT (ConfCryptFile, ctx) (WriterT [T.Text] (ExceptT ConfCryptError m))
+type ConfCryptM m ctx =
+    ReaderT (ConfCryptFile, ctx) (
+            WriterT [T.Text] (
+                ExceptT ConfCryptError (
+                    ResourceT m)
+                )
+        )
 
 
 data ConfCryptError
@@ -17,6 +24,7 @@ data ConfCryptError
     | NonRSAKey
     | KeyUnpackingError T.Text
     | DecryptionError RSA.Error
+    | AWSDecryptionError T.Text
     | EncryptionError RSA.Error
     | MissingLine T.Text
     | UnknownParameter T.Text

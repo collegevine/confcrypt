@@ -20,10 +20,13 @@ module ConfCrypt.Encryption (
     ) where
 
 import ConfCrypt.Types
+import ConfCrypt.Providers.AWS (AWSCtx(..), KMSKeyId(..))
 
+import Control.Lens (view)
 import Control.Monad.Trans (lift, liftIO, MonadIO)
 import Control.Monad.Trans.Class (MonadTrans)
 import Control.Monad.Except (MonadError, throwError, Except, ExceptT)
+import Conduit (MonadResource, MonadThrow)
 import Crypto.PubKey.OpenSsh (OpenSshPublicKey(..), OpenSshPrivateKey(..), decodePublic, decodePrivate)
 import qualified Crypto.PubKey.RSA.Types as RSA
 import Crypto.Types.PubKey.RSA (PrivateKey(..), PublicKey(..))
@@ -34,6 +37,9 @@ import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Base64 as B64
 import Data.Text as T
 import Data.Text.Encoding as T
+import qualified Control.Monad.Trans.AWS as AWS
+import qualified Network.AWS.KMS.Encrypt as AWS
+import qualified Network.AWS.KMS.Decrypt as AWS
 
 -- | This class provides the ability to extract specific parts of a keypair from a given RSA 'KeyPair'
 class KeyProjection key where
@@ -99,7 +105,7 @@ instance MonadDecrypt (Except ConfCryptError) RSA.PrivateKey where
     decryptValue privateKey encryptedValue =
         either (throwError . DecryptionError)
             (pure . T.decodeUtf8) $
-            decrypt Nothing privateKey (B64.decodeLenient . BSC.pack $ T.unpack encryptedValue)
+            decrypt Nothing privateKey (unwrapBytes encryptedValue)
 
 class (Monad m, MonadRandom m) => MonadEncrypt m k where
     encryptValue :: k -> T.Text -> m (Either ConfCryptError T.Text)
@@ -109,10 +115,30 @@ instance (Monad m, MonadRandom m) => MonadEncrypt m RSA.PublicKey where
     encryptValue publicKey nakedValue = do
         res <- encrypt publicKey bytes
         pure $ either (Left . EncryptionError)
-               (Right . T.pack . BSC.unpack . B64.encode)
+               (Right . wrapBytes)
                res
         where
             bytes = T.encodeUtf8 nakedValue
 
 instance (MonadRandom m, MonadTrans n, Monad (n m),Functor (n m) ) => MonadRandom (n m) where
     getRandomBytes = lift . getRandomBytes
+
+--
+-- KMS Support
+--
+instance MonadDecrypt (ConfCryptM IO AWSCtx) AWSCtx where
+    decryptValue AWSCtx {env, key} rawValue = AWS.runAWST env $ do
+        let decryptRequest = AWS.decrypt (unwrapBytes rawValue)
+        decryptResponse <- AWS.send decryptRequest
+        let status = view AWS.drsResponseStatus decryptResponse
+            plaintext = view AWS.drsPlaintext decryptResponse
+            decodedResult = wrapBytes <$> plaintext
+        -- TODO look into AWS status codes and fail on the failure cases
+        -- when (status)
+        maybe (throwError $ AWSDecryptionError "Unable to decrypt value") pure decodedResult
+
+unwrapBytes :: T.Text -> BS.ByteString
+unwrapBytes = B64.decodeLenient . BSC.pack . T.unpack
+
+wrapBytes :: BS.ByteString -> T.Text
+wrapBytes = T.pack . BSC.unpack . B64.encode
