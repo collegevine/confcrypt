@@ -1,6 +1,7 @@
 module ConfCrypt.CLI.API (
     KeyAndConf(..),
     Conf(..),
+    KeyProvider(..),
     AnyCommand(..),
     cliParser
 ) where
@@ -11,7 +12,7 @@ import ConfCrypt.Commands (AddConfCrypt(..), EditConfCrypt(..), DeleteConfCrypt(
 import Options.Applicative
 import qualified Data.Text as T
 
-data KeyAndConf = KeyAndConf {key :: FilePath, conf :: FilePath}
+data KeyAndConf = KeyAndConf {key :: FilePath, provider :: KeyProvider, conf :: FilePath}
     deriving (Eq, Show)
 newtype Conf = Conf FilePath
     deriving (Eq, Show)
@@ -24,6 +25,11 @@ data AnyCommand
     | DC Conf DeleteConfCrypt
     | VC KeyAndConf
     | NC
+    deriving (Eq, Show)
+
+data KeyProvider
+    = AWS
+    | LocalRSA
     deriving (Eq, Show)
 
 cliParser :: ParserInfo AnyCommand
@@ -95,6 +101,7 @@ keyAndConf =
             metavar "KEY" <>
             help "The path to the private RSA key used to encrypt this file."
             ) <*>
+        getProvider <*>
         onlyConf
 
 getConf :: Parser Conf
@@ -129,4 +136,11 @@ onlyType =
         )
     where
         fromString = read . (:) 'C'
+
+getProvider :: Parser KeyProvider
+getProvider = flag LocalRSA AWS (
+    long "use-aws" <>
+    help "Toggles whether the --key indicates an RSA keyfile or an AWS KMS key identifer"
+    )
+
 

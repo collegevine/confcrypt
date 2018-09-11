@@ -23,7 +23,7 @@ data ConfCryptError
     = ParserError T.Text
     | NonRSAKey
     | KeyUnpackingError T.Text
-    | DecryptionError RSA.Error
+    | DecryptionError T.Text
     | AWSDecryptionError T.Text
     | AWSEncryptionError T.Text
     | EncryptionError RSA.Error

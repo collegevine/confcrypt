@@ -1,6 +1,7 @@
 module ConfCrypt.Providers.AWS (
     AWSCtx(..),
-    KMSKeyId(..)
+    KMSKeyId(..),
+    loadAwsCtx
     ) where
 
 import ConfCrypt.Types
@@ -13,7 +14,7 @@ newtype KMSKeyId = KMSKeyId {keyId :: T.Text}
     deriving (Show, Eq)
 
 data AWSCtx =
-    AWSCtx {env :: AWS.Env, key :: KMSKeyId}
+    AWSCtx {env :: AWS.Env, kmsKey :: KMSKeyId}
 
 instance HasEnv (ConfCryptFile, AWSCtx) where
     environment = lens getEnv setEnv
@@ -23,3 +24,7 @@ instance HasEnv (ConfCryptFile, AWSCtx) where
             setEnv :: (ConfCryptFile, AWSCtx) -> AWS.Env -> (ConfCryptFile, AWSCtx)
             setEnv (file, ctx) env' = (file, ctx {env = env'})
 
+
+loadAwsCtx keyId = do
+    env <- AWS.newEnv AWS.Discover
+    pure AWSCtx {env = env, kmsKey = keyId}

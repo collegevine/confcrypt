@@ -45,6 +45,8 @@ import qualified Control.Monad.Trans.AWS as AWS
 import qualified Network.AWS.KMS.Encrypt as AWS
 import qualified Network.AWS.KMS.Decrypt as AWS
 
+import Debug.Trace
+
 data TextKey key where
     TextKey :: LocalKey key => key -> TextKey key
 
@@ -116,8 +118,8 @@ instance MonadDecrypt (Except ConfCryptError) RSA.PrivateKey where
     decryptValue _ "" = pure ""
     decryptValue privateKey encryptedValue =
         either (throwError . DecryptionError)
-            (pure . T.decodeUtf8) $
-            decrypt Nothing privateKey (unwrapBytes encryptedValue)
+               (pure . T.decodeUtf8) $
+               (lMap (T.pack . show) . decrypt Nothing privateKey =<< unwrapBytes encryptedValue)
 
 instance MonadDecrypt (Except ConfCryptError) (TextKey RSA.PrivateKey) where
     decryptValue (TextKey key) = decryptValue key
@@ -136,12 +138,10 @@ class (Monad m, MonadError ConfCryptError m) => MonadEncrypt m k where
 instance (Monad m, MonadRandom m, MonadError ConfCryptError m) => MonadEncrypt m RSA.PublicKey where
     encryptValue _ "" = pure ""
     encryptValue publicKey nakedValue = do
-        res <- encrypt publicKey bytes
+        res <- encrypt publicKey $ T.encodeUtf8 nakedValue
         either (throwError . EncryptionError)
                (pure . wrapBytes)
                res
-        where
-            bytes = T.encodeUtf8 nakedValue
 
 instance (MonadRandom m) => MonadRandom (ConfCryptM m k) where
     getRandomBytes = lift . lift . lift . lift . getRandomBytes
@@ -157,26 +157,35 @@ instance KMSKey AWSCtx
 -- TODO can this constraint be cleaner? Duplicating 'key' is ugly
 instance MonadDecrypt (ConfCryptM IO (RemoteKey AWSCtx)) (RemoteKey AWSCtx) where
     decryptValue (RemoteKey AWSCtx {env}) rawValue = AWS.runAWST env $ do
-        let decryptRequest = AWS.decrypt (unwrapBytes rawValue)
-        decryptResponse <- AWS.send decryptRequest
+        -- Unwrap bytes
+        let decoded = unwrapBytes rawValue
+        rawBytes <- either (throwError . AWSDecryptionError) pure decoded
+        -- Decrypt them
+        decryptResponse <- AWS.send $ AWS.decrypt rawBytes
         let status = view AWS.drsResponseStatus decryptResponse
             plaintext = view AWS.drsPlaintext decryptResponse
-            decodedResult = wrapBytes <$> plaintext
+            decodedResult = T.decodeUtf8 <$> plaintext
         -- TODO look into AWS status codes and fail on the failure cases
         -- when (status)
         maybe (throwError $ AWSDecryptionError "Unable to decrypt value") pure decodedResult
 
 instance MonadEncrypt (ConfCryptM IO (RemoteKey AWSCtx)) (RemoteKey AWSCtx) where
-    encryptValue (RemoteKey AWSCtx {env, key}) rawValue = AWS.runAWST env $ do
-        let encryptRequest = AWS.encrypt (keyId key) (unwrapBytes rawValue)
+    encryptValue (RemoteKey AWSCtx {env, kmsKey}) rawValue = AWS.runAWST env $ do
+        -- Encode bytes
+        let encryptRequest = AWS.encrypt (keyId kmsKey) $ T.encodeUtf8 rawValue
         encryptResponse <- AWS.send encryptRequest
         let status = view AWS.ersResponseStatus encryptResponse
             plaintext = view AWS.ersCiphertextBlob encryptResponse
+            -- Wrap them up in B64
             decodedResult = wrapBytes <$> plaintext
         maybe (throwError $ AWSEncryptionError "Unable to encrypt value") pure decodedResult
 
-unwrapBytes :: T.Text -> BS.ByteString
-unwrapBytes = B64.decodeLenient . BSC.pack . T.unpack
+unwrapBytes :: T.Text -> Either T.Text BS.ByteString
+unwrapBytes = lMap T.pack . B64.decode . T.encodeUtf8
+
+lMap :: (a -> b) -> Either a r -> Either b r
+lMap f (Left v) = Left (f v)
+lMap _ (Right v) = Right v
 
 wrapBytes :: BS.ByteString -> T.Text
-wrapBytes = T.pack . BSC.unpack . B64.encode
+wrapBytes = T.decodeUtf8 . B64.encode
