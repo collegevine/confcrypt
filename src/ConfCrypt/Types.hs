@@ -25,10 +25,12 @@ data ConfCryptError
     | KeyUnpackingError T.Text
     | DecryptionError RSA.Error
     | AWSDecryptionError T.Text
+    | AWSEncryptionError T.Text
     | EncryptionError RSA.Error
     | MissingLine T.Text
     | UnknownParameter T.Text
     | WrongFileAction T.Text
+    | CleanupError T.Text
     deriving (Show, Generic, Eq, Ord)
 
 instance Ord RSA.Error where
@@ -82,6 +84,9 @@ data SchemaType
     | CInt
     | CBoolean
     deriving (Eq, Ord, Show, Generic, NFData, Read)
+
+class LocalKey key
+class KMSKey key
 
 typeToOutputString ::
     SchemaType

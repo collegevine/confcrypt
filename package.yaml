@@ -51,6 +51,7 @@ library:
     - ConfCrypt.Providers.AWS
   default-extensions: MultiParamTypeClasses OverloadedStrings FlexibleContexts FlexibleInstances NamedFieldPuns
         TupleSections DeriveGeneric DeriveAnyClass FunctionalDependencies TypeApplications UndecidableInstances
+        GADTs ConstraintKinds
 
 
 

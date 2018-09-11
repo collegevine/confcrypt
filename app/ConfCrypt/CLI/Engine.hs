@@ -10,6 +10,7 @@ import ConfCrypt.Default (emptyConfCryptFile)
 import ConfCrypt.CLI.API
 
 import Conduit (ResourceT, runResourceT)
+import Control.Exception (catch)
 import Control.DeepSeq (force)
 import Control.Monad.Trans (MonadIO)
 import Control.Monad.Reader (MonadReader, ReaderT, runReaderT, withReaderT)
@@ -62,17 +63,19 @@ run parsedArguments = do
                         runConfCrypt parsedConfiguration $ evaluate cmd
             either (\e -> print e *> exitFailure) pure result
     where
-        injectPubKey :: PublicKey -> (ConfCryptFile, ()) -> (ConfCryptFile, PublicKey)
-        injectPubKey key (conf, _) = (conf, key)
-        injectPrivateKey :: PrivateKey -> (ConfCryptFile, ()) -> (ConfCryptFile, PrivateKey)
-        injectPrivateKey key (conf, _) = (conf, key)
+        injectPubKey :: PublicKey -> (ConfCryptFile, ()) -> (ConfCryptFile, TextKey PublicKey)
+        injectPubKey key (conf, _) = (conf, TextKey key)
+        injectPrivateKey :: PrivateKey -> (ConfCryptFile, ()) -> (ConfCryptFile, TextKey PrivateKey)
+        injectPrivateKey key (conf, _) = (conf, TextKey key)
 
 runConfCrypt ::
     ConfCryptFile ->
     ConfCryptM IO () a
     -> IO (Either ConfCryptError [T.Text])
-runConfCrypt file action =
-     runResourceT . runExceptT . execWriterT  $ runReaderT action (file, ())
+runConfCrypt file action = runResourceT . runExceptT . execWriterT  $ runReaderT action (file, ())
+     -- catch (runResourceT . runExceptT . execWriterT  $ runReaderT action (file, ()))
+       --     (pure . Left . CleanupError . T.pack . show)
+
 
 confFilePath :: AnyCommand -> FilePath
 confFilePath  (RC KeyAndConf {conf}) = conf

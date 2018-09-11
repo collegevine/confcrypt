@@ -21,7 +21,7 @@ module ConfCrypt.Commands (
 
 import ConfCrypt.Default (defaultLines)
 import ConfCrypt.Types
-import ConfCrypt.Encryption (encryptValue, decryptValue)
+import ConfCrypt.Encryption (MonadEncrypt, MonadDecrypt, encryptValue, decryptValue, TextKey(..), RemoteKey(..))
 import ConfCrypt.Validation (runAllRules)
 import ConfCrypt.Providers.AWS (AWSCtx)
 
@@ -29,7 +29,7 @@ import Control.Arrow (second)
 import Control.Monad (unless)
 import Control.Monad.Trans (lift)
 import Control.Monad.Reader (ask)
-import Control.Monad.Except (throwError, runExcept, MonadError)
+import Control.Monad.Except (throwError, runExcept, MonadError, Except)
 import Control.Monad.Writer (tell, MonadWriter)
 import Crypto.Random (MonadRandom)
 import Data.Foldable (foldrM, traverse_)
@@ -49,10 +49,19 @@ data FileAction
 class Monad m => Command a m where
     evaluate :: a -> m ()
 
+type LocalDecryptC key = (MonadDecrypt (Except ConfCryptError) key, LocalKey key)
+type LocalEncryptC m key = (MonadEncrypt m key, LocalKey key)
+type LocalConfCrypt m key = ConfCryptM m (TextKey key)
+
+type RemoteDecryptC key = (MonadDecrypt (RemoteConfCrypt key) (RemoteKey key), KMSKey key)
+type RemoteEncryptC key = (MonadEncrypt (RemoteConfCrypt key) (RemoteKey key), KMSKey key)
+type RemoteConfCrypt key = ConfCryptM IO (RemoteKey key)
+
+-- | Read and return the full contents of an encrypted file. Provides support for using a local RSA key or an externl KMS service
 data ReadConfCrypt = ReadConfCrypt
-instance Monad m => Command ReadConfCrypt (ConfCryptM m RSA.PrivateKey) where
+instance (Monad m, LocalDecryptC key) => Command ReadConfCrypt (LocalConfCrypt m key) where
     evaluate _ = do
-        (ccFile, pk) <- ask
+        (ccFile, TextKey pk) <- ask
         let params = parameters ccFile
         transformed <- mapM (\p -> decryptedParam  p . runExcept $ decryptValue pk (paramValue p)) params
         processReadLines transformed ccFile
@@ -60,50 +69,72 @@ instance Monad m => Command ReadConfCrypt (ConfCryptM m RSA.PrivateKey) where
             decryptedParam param (Left e) = throwError e
             decryptedParam param (Right v) = pure . ParameterLine $ ParamLine {pName = paramName param, pValue = v}
 
- -- TODO reduce the duplication
-instance Command ReadConfCrypt (ConfCryptM IO AWSCtx) where
+instance (RemoteDecryptC key) => Command ReadConfCrypt (RemoteConfCrypt key) where
     evaluate _ = do
-        (ccFile, pk) <- ask
+        (ccFile, ctx) <- ask
         let params = parameters ccFile
-        transformed <- mapM (\p -> decryptedParam  p <$> decryptValue pk (paramValue p)) params
+        transformed <- mapM (\p -> decryptedParam  p <$> decryptValue ctx (paramValue p)) params
         processReadLines transformed ccFile
         where
-            decryptedParam param v = ParameterLine $ ParamLine {pName = paramName param, pValue = v}
+            decryptedParam param v = ParameterLine ParamLine {pName = paramName param, pValue = v}
 
 processReadLines transformed ccFile =
         writeFullContentsToBuffer False =<<  genNewFileState (fileContents ccFile) transformedLines
     where
     transformedLines = [(p, Edit)| p <- transformed]
 
+
+
 data AddConfCrypt = AddConfCrypt {aName :: T.Text, aValue :: T.Text, aType :: SchemaType}
     deriving (Eq, Read, Show, Generic)
-instance (Monad m, MonadRandom m) => Command AddConfCrypt (ConfCryptM m RSA.PublicKey) where
-    evaluate AddConfCrypt {aName, aValue, aType} =  do
-        (ccFile, pubKey) <- ask
-        rawEncrypted <- lift . lift . lift $ encryptValue pubKey aValue
-        encryptedValue <- either throwError pure rawEncrypted
-        let contents = fileContents ccFile
-            instructions = [(SchemaLine sl, Add), (ParameterLine (pl {pValue = encryptedValue}), Add)]
-        newcontents <- genNewFileState contents instructions
-        writeFullContentsToBuffer False newcontents
-        where
-            (pl, Just sl) = parameterToLines $ Parameter {paramName = aName, paramValue = aValue, paramType = Just aType}
+
+instance (Monad m, MonadRandom m, LocalEncryptC (LocalConfCrypt m key) key) => Command AddConfCrypt (LocalConfCrypt m key) where
+    evaluate ac@AddConfCrypt {aName, aValue, aType} =  do
+        (ccFile, TextKey pubKey) <- ask
+        rawEncrypted <- encryptValue pubKey aValue
+        addOutput ccFile ac rawEncrypted
+
+instance (RemoteEncryptC key) => Command AddConfCrypt (RemoteConfCrypt key) where
+    evaluate ac@AddConfCrypt {aName, aValue, aType} =  do
+        (ccFile, ctx ) <- ask
+        addOutput ccFile ac =<< encryptValue ctx aValue
+
+addOutput ccFile AddConfCrypt {aName, aValue, aType} encryptedValue = do
+    let contents = fileContents ccFile
+        instructions = [(SchemaLine sl, Add), (ParameterLine (pl {pValue = encryptedValue}), Add)]
+    newcontents <- genNewFileState contents instructions
+    writeFullContentsToBuffer False newcontents
+    where
+        (pl, Just sl) = parameterToLines Parameter {paramName = aName, paramValue = aValue, paramType = Just aType}
+
 
 
 data EditConfCrypt = EditConfCrypt {eName:: T.Text, eValue :: T.Text, eType :: SchemaType}
     deriving (Eq, Read, Show, Generic)
-instance (Monad m, MonadRandom m) => Command EditConfCrypt (ConfCryptM m RSA.PublicKey) where
+
+instance (Monad m, MonadRandom m, LocalEncryptC (LocalConfCrypt m key) key) => Command EditConfCrypt (LocalConfCrypt m key) where
     --TODO this implementation is extremely similar 'Add', factor it out
-    evaluate EditConfCrypt {eName, eValue, eType} = do
-        (ccFile, pk) <- ask
+    evaluate ec@EditConfCrypt {eName, eValue, eType} = do
+        (ccFile, TextKey pk) <- ask
 
         -- Editing an existing parameter requires that the file is inplace. Its not difficult to fall back into
         -- 'add' behavior in the case where the parameter isn't present, but I'm not implementing that right now.
         unless ( any ((==) eName . paramName) $ parameters ccFile) $
             throwError $ UnknownParameter eName
 
-        rawEncrypted <- lift . lift . lift $ encryptValue pk eValue
-        encryptedValue <- either throwError pure rawEncrypted
+        rawEncrypted <- encryptValue pk eValue
+        editOutput ccFile ec rawEncrypted
+
+instance (RemoteEncryptC key) => Command EditConfCrypt (RemoteConfCrypt key) where
+    evaluate ec@EditConfCrypt {eName, eValue, eType} = do
+        (ccFile, pk) <- ask
+        -- See note above
+        unless ( any ((==) eName . paramName) $ parameters ccFile) $
+            throwError $ UnknownParameter eName
+
+        editOutput ccFile ec =<< encryptValue pk eValue
+
+editOutput ccFile EditConfCrypt {eName, eValue, eType} encryptedValue = do
         let contents = fileContents ccFile
             instructions = [(SchemaLine sl, Edit),
                             (ParameterLine (pl {pValue = encryptedValue}), Edit)
@@ -111,8 +142,7 @@ instance (Monad m, MonadRandom m) => Command EditConfCrypt (ConfCryptM m RSA.Pub
         newcontents <- genNewFileState contents instructions
         writeFullContentsToBuffer False newcontents
         where
-            (pl, Just sl) = parameterToLines $ Parameter {paramName = eName, paramValue = eValue, paramType = Just eType}
-
+            (pl, Just sl) = parameterToLines Parameter {paramName = eName, paramValue = eValue, paramType = Just eType}
 
 
 data DeleteConfCrypt = DeleteConfCrypt {dName:: T.Text}
@@ -134,12 +164,16 @@ instance (Monad m, MonadRandom m) => Command DeleteConfCrypt (ConfCryptM m ()) w
             findNamedLine (ParameterLine ParamLine {pName}) _ = dName == pName
             findNamedLine _ _ = False
 
+-- TODO consider using this style of constraint for all other instances
 data ValidateConfCrypt = ValidateConfCrypt
-instance (Monad m) => Command ValidateConfCrypt (ConfCryptM m RSA.PrivateKey) where
+instance (Monad m, MonadDecrypt (ConfCryptM m key) key) => Command ValidateConfCrypt (ConfCryptM m key) where
     evaluate _ = runAllRules
 
 data EncryptWholeConfCrypt = EncryptWholeConfCrypt
-instance (Monad m, MonadRandom m) => Command EncryptWholeConfCrypt (ConfCryptM m RSA.PublicKey) where
+instance (Monad m, MonadRandom m) => Command EncryptWholeConfCrypt (ConfCryptM m (TextKey RSA.PublicKey)) where
+    evaluate = undefined
+
+instance (RemoteEncryptC key) => Command EncryptWholeConfCrypt (RemoteConfCrypt key) where
     evaluate = undefined
 
 data NewConfCrypt = NewConfCrypt
