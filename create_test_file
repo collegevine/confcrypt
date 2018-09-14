@@ -1,5 +1,8 @@
 #!/bin/bash
 
+
+# Local test
+echo "Running with a local key"
 rm test.econf
 touch test.econf
 
@@ -8,5 +11,20 @@ confcrypt add --key ~/.ssh/confcrypt --name Test --type String --value Foobar te
 RES=$(confcrypt add --key ~/.ssh/confcrypt --name Test2 --type Int --value 42 test.econf)
 echo "$RES" > test.econf
 
-confcrypt validate --key ~/.ssh/confcrypt test.econf
+confcrypt read --key ~/.ssh/confcrypt test.econf
+
+
+
+
+# KMS Test
+KMS_FILE="testk.econf"
+rm $KMS_FILE
+touch $KMS_FILE
+echo "Running KMS round-trip test"
+confcrypt add --use-aws --key 752e42fb-c5f0-473d-a532-2e2ee6877cea --name Test --type String --value Foobar $KMS_FILE > $KMS_FILE
+
+RES=$(confcrypt add --use-aws --key 752e42fb-c5f0-473d-a532-2e2ee6877cea --name Test2 --type Int --value 42 $KMS_FILE)
+echo "$RES" > $KMS_FILE
+
+confcrypt read --use-aws --key 752e42fb-c5f0-473d-a532-2e2ee6877cea $KMS_FILE
 

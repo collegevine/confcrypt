@@ -12,6 +12,9 @@ import Options.Applicative (execParserPure, ParserResult(..), defaultPrefs)
 import Test.Tasty
 import Test.Tasty.HUnit
 
+localTestConf :: KeyAndConf
+localTestConf = KeyAndConf "testKey" LocalRSA "test.econf"
+
 cliAPITests :: TestTree
 cliAPITests = testGroup "cli api" [
     apiTests
@@ -47,7 +50,7 @@ readCases = testGroup "read" [
         let args = ["read", "-k", "testKey", "test.econf"]
             res = execParserPure defaultPrefs cliParser args
         case res of
-            Success (RC (KeyAndConf "testKey" "test.econf") ) -> assertBool "can't fail" True
+            Success (RC (KeyAndConf "testKey" LocalRSA "test.econf") ) -> assertBool "can't fail" True
             Success a -> assertFailure ("Incorrectly parsed: "<> show a)
             Failure _ -> assertFailure "Should have parsed an RC"
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
@@ -55,7 +58,7 @@ readCases = testGroup "read" [
         let args = ["read", "--key", "testKey","test.econf"]
             res = execParserPure defaultPrefs cliParser args
         case res of
-            Success (RC (KeyAndConf "testKey" "test.econf") ) -> assertBool "can't fail" True
+            Success (RC (KeyAndConf "testKey" LocalRSA "test.econf") ) -> assertBool "can't fail" True
             Success a -> assertFailure ("Incorrectly parsed: "<> show a)
             Failure _ -> assertFailure "Should have parsed an RC"
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
@@ -107,7 +110,7 @@ addCases = testGroup "add" [
         let args =  ["add", "--key", "testKey", "--name", "test", "--type", "String", "--value", "foo", "test.econf"]
             res = execParserPure defaultPrefs cliParser args
         case res of
-            Success (AC (KeyAndConf "testKey" "test.econf") (AddConfCrypt "test" "foo" CString)) -> assertBool "can't fail" True
+            Success (AC (KeyAndConf "testKey" LocalRSA "test.econf") (AddConfCrypt "test" "foo" CString)) -> assertBool "can't fail" True
             Success a -> assertFailure ("Incorrectly parsed: "<> show a)
             Failure _ -> assertFailure "Should have parsed an AC"
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
@@ -116,7 +119,7 @@ addCases = testGroup "add" [
         let args =  ["add", "-k", "testKey", "-n", "test", "-t", "String", "-v", "foo", "test.econf"]
             res = execParserPure defaultPrefs cliParser args
         case res of
-            Success (AC (KeyAndConf "testKey" "test.econf") (AddConfCrypt "test" "foo" CString)) -> assertBool "can't fail" True
+            Success (AC (KeyAndConf "testKey" LocalRSA "test.econf") (AddConfCrypt "test" "foo" CString)) -> assertBool "can't fail" True
             Success a -> assertFailure ("Incorrectly parsed: "<> show a)
             Failure _ -> assertFailure "Should have parsed an AC"
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
@@ -168,7 +171,7 @@ editCases = testGroup "edit" [
         let args =  ["edit", "--key", "testKey", "--name", "test", "--type", "String", "--value", "foo", "test.econf"]
             res = execParserPure defaultPrefs cliParser args
         case res of
-            Success (EC (KeyAndConf "testKey" "test.econf") (EditConfCrypt "test" "foo" CString)) -> assertBool "can't fail" True
+            Success (EC (KeyAndConf "testKey" LocalRSA "test.econf") (EditConfCrypt "test" "foo" CString)) -> assertBool "can't fail" True
             Success a -> assertFailure ("Incorrectly parsed: "<> show a)
             Failure _ -> assertFailure "Should have parsed an AC"
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
@@ -177,7 +180,7 @@ editCases = testGroup "edit" [
         let args =  ["edit", "-k", "testKey", "-n", "test", "-t", "String", "-v", "foo", "test.econf"]
             res = execParserPure defaultPrefs cliParser args
         case res of
-            Success (EC (KeyAndConf "testKey" "test.econf") (EditConfCrypt "test" "foo" CString)) -> assertBool "can't fail" True
+            Success (EC (KeyAndConf "testKey" LocalRSA "test.econf") (EditConfCrypt "test" "foo" CString)) -> assertBool "can't fail" True
             Success a -> assertFailure ("Incorrectly parsed: "<> show a)
             Failure _ -> assertFailure "Should have parsed an AC"
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
@@ -240,7 +243,7 @@ validateCases = testGroup "validate" [
         let args = ["validate", "-k", "testKey", "test.econf"]
             res = execParserPure defaultPrefs cliParser args
         case res of
-            Success (VC (KeyAndConf "testKey" "test.econf") ) -> assertBool "can't fail" True
+            Success (VC (KeyAndConf "testKey" LocalRSA "test.econf") ) -> assertBool "can't fail" True
             Success a -> assertFailure ("Incorrectly parsed: "<> show a)
             Failure _ -> assertFailure "Should have parsed an VC"
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
@@ -248,7 +251,7 @@ validateCases = testGroup "validate" [
         let args = ["validate", "--key", "testKey","test.econf"]
             res = execParserPure defaultPrefs cliParser args
         case res of
-            Success (VC (KeyAndConf "testKey" "test.econf") ) -> assertBool "can't fail" True
+            Success (VC (KeyAndConf "testKey" LocalRSA "test.econf") ) -> assertBool "can't fail" True
             Success a -> assertFailure ("Incorrectly parsed: "<> show a)
             Failure _ -> assertFailure "Should have parsed an VC"
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
@@ -274,7 +277,7 @@ encryptWholeCases = testGroup "encrypt whole" [
         let args = ["encrypt", "-k", "testKey", "test.econf"]
             res = execParserPure defaultPrefs cliParser args
         case res of
-            Success (WC (KeyAndConf "testKey" "test.econf") ) -> assertBool "can't fail" True
+            Success (WC (KeyAndConf "testKey" LocalRSA "test.econf") ) -> assertBool "can't fail" True
             Success a -> assertFailure ("Incorrectly parsed: "<> show a)
             Failure _ -> assertFailure "Should have parsed an WC"
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
@@ -282,7 +285,7 @@ encryptWholeCases = testGroup "encrypt whole" [
         let args = ["encrypt", "--key", "testKey","test.econf"]
             res = execParserPure defaultPrefs cliParser args
         case res of
-            Success (WC (KeyAndConf "testKey" "test.econf") ) -> assertBool "can't fail" True
+            Success (WC (KeyAndConf "testKey" LocalRSA "test.econf") ) -> assertBool "can't fail" True
             Success a -> assertFailure ("Incorrectly parsed: "<> show a)
             Failure _ -> assertFailure "Should have parsed an WC"
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"

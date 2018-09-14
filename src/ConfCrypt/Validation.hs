@@ -8,9 +8,9 @@ module ConfCrypt.Validation (
     ) where
 
 import ConfCrypt.Types
-import ConfCrypt.Encryption (decryptValue)
+import ConfCrypt.Encryption (decryptValue, MonadDecrypt)
 
-import Control.Monad.Except (runExcept)
+import Control.Monad.Except (runExcept, catchError)
 import Control.Monad.Writer (MonadWriter, tell)
 import Control.Monad.Reader (MonadReader, ask)
 import Data.Char (isDigit)
@@ -18,9 +18,8 @@ import Data.Foldable (traverse_)
 import Data.Maybe (isNothing)
 import qualified Data.Text as T
 import qualified Data.Map as M
-import qualified Crypto.PubKey.RSA.Types as RSA
 
-runAllRules :: (Monad m, MonadWriter [T.Text] m, MonadReader (ConfCryptFile, RSA.PrivateKey) m) =>
+runAllRules :: (MonadDecrypt m key, Monad m, MonadWriter [T.Text] m, MonadReader (ConfCryptFile, key) m) =>
     m ()
 runAllRules = do
     (ccf, privateKey) <- ask
@@ -29,24 +28,24 @@ runAllRules = do
     logMissingParameters ccf
 
 -- | For each (Schema, Parameter)  pair, confirm that the parameter's value type matches the schema.
-parameterTypesMatchSchema :: (Monad m, MonadWriter [T.Text] m) =>
-    RSA.PrivateKey
+parameterTypesMatchSchema :: (Monad m, MonadWriter [T.Text] m, MonadDecrypt m key) =>
+    key
     -> ConfCryptFile
     -> m ()
-parameterTypesMatchSchema privateKey ConfCryptFile {parameters} =
+parameterTypesMatchSchema key ConfCryptFile {parameters} =
     traverse_ decryptAndCompare parameters
     where
         decryptAndCompare Parameter {paramName, paramValue, paramType} =
-            case runExcept (decryptValue privateKey paramValue) of
-                Left _ -> tell ["Error: Could not decrypt " <> paramName]
-                Right val ->
-                    case paramType of
-                        Nothing -> pure ()
-                        Just CInt | all isDigit $ T.unpack val -> pure ()
-                        Just CBoolean | T.toLower val == "true" || T.toLower val == "false" -> pure ()
-                        Just CString | not (T.null val) -> pure ()
-                        Just CString | T.null val -> tell ["Warning: "<> paramName <> " is empty"]
-                        Just pt -> tell ["Error: "<> paramName <> " does not match the schema type " <> typeToOutputString pt]
+            catchError (runRule paramType paramName =<< decryptValue key paramValue)
+                       (const $ tell ["Error: Could not decrypt " <> paramName])
+        runRule paramType paramName val =
+            case paramType of
+                Nothing -> pure ()
+                Just CInt | all isDigit $ T.unpack val -> pure ()
+                Just CBoolean | T.toLower val == "true" || T.toLower val == "false" -> pure ()
+                Just CString | not (T.null val) -> pure ()
+                Just CString | T.null val -> tell ["Warning: "<> paramName <> " is empty"]
+                Just pt -> tell ["Error: "<> paramName <> " does not match the schema type " <> typeToOutputString pt]
 
 logMissingSchemas :: (Monad m, MonadWriter [T.Text] m) =>
     ConfCryptFile
