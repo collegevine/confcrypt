@@ -118,7 +118,7 @@ instance MonadDecrypt (Except ConfCryptError) RSA.PrivateKey where
     decryptValue _ "" = pure ""
     decryptValue privateKey encryptedValue =
         either (throwError . DecryptionError)
-               (pure . T.decodeUtf8) $
+               (pure . T.decodeUtf8)
                (lMap (T.pack . show) . decrypt Nothing privateKey =<< unwrapBytes encryptedValue)
 
 instance MonadDecrypt (Except ConfCryptError) (TextKey RSA.PrivateKey) where
