@@ -48,6 +48,9 @@ As soon as an application is deployed or built on more than a single machine, yo
     `confcrypt encrypt --key <filename> <filename>`
     Given an unencrypted config file this command encrypts it using the provided key.
 
+- Using Amazon KMS instead of a local key
+    The `--use-aws` flag changes the behavior of the `--key` parameter to represent a KMS key id rather than an on-disk rsa key file.
+
 ## The confcrypt file format
     ```
     # confcrypt schema
