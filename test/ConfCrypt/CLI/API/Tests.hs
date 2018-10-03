@@ -26,8 +26,7 @@ apiTests = testGroup "specific cases" [
     addCases,
     editCases,
     deleteCases,
-    validateCases,
-    encryptWholeCases
+    validateCases
     ]
 
 readCases :: TestTree
@@ -254,39 +253,5 @@ validateCases = testGroup "validate" [
             Success (VC (KeyAndConf "testKey" LocalRSA "test.econf") ) -> assertBool "can't fail" True
             Success a -> assertFailure ("Incorrectly parsed: "<> show a)
             Failure _ -> assertFailure "Should have parsed an VC"
-            CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
-    ]
-
-encryptWholeCases :: TestTree
-encryptWholeCases = testGroup "encrypt whole" [
-    testCase "encrypt requires a key" $ do
-        let args = ["encrypt", "test.econf"]
-            res = execParserPure defaultPrefs cliParser args
-        case res of
-            Failure _ -> assertBool "can't fail" True
-            Success a -> assertFailure ("Incorrectly parsed: "<> show a)
-            CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
-   ,testCase "encrypt requires a config file" $ do
-        let args = ["encrypt", "--key", "testKey"]
-            res = execParserPure defaultPrefs cliParser args
-        case res of
-            Failure _ -> assertBool "can't fail" True
-            Success a -> assertFailure ("Incorrectly parsed: "<> show a)
-            CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
-   ,testCase "encrypt preserves the provided key file with -k" $ do
-        let args = ["encrypt", "-k", "testKey", "test.econf"]
-            res = execParserPure defaultPrefs cliParser args
-        case res of
-            Success (WC (KeyAndConf "testKey" LocalRSA "test.econf") ) -> assertBool "can't fail" True
-            Success a -> assertFailure ("Incorrectly parsed: "<> show a)
-            Failure _ -> assertFailure "Should have parsed an WC"
-            CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
-   ,testCase "encrypt preserves the provided key file with --key" $ do
-        let args = ["encrypt", "--key", "testKey","test.econf"]
-            res = execParserPure defaultPrefs cliParser args
-        case res of
-            Success (WC (KeyAndConf "testKey" LocalRSA "test.econf") ) -> assertBool "can't fail" True
-            Success a -> assertFailure ("Incorrectly parsed: "<> show a)
-            Failure _ -> assertFailure "Should have parsed an WC"
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
     ]

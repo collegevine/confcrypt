@@ -45,8 +45,6 @@ import qualified Control.Monad.Trans.AWS as AWS
 import qualified Network.AWS.KMS.Encrypt as AWS
 import qualified Network.AWS.KMS.Decrypt as AWS
 
-import Debug.Trace
-
 data TextKey key where
     TextKey :: LocalKey key => key -> TextKey key
 

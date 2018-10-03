@@ -44,9 +44,6 @@ As soon as an application is deployed or built on more than a single machine, yo
 - validate a config
     `confcrypt validate --key <filename> <filename>`
     Checks that each config parameter matches the type of its schema. All errors are accumulated and returned at the end, with a response code equal to the number of failures.
-- encrypt a config
-    `confcrypt encrypt --key <filename> <filename>`
-    Given an unencrypted config file this command encrypts it using the provided key.
 
 - Using Amazon KMS instead of a local key
     The `--use-aws` flag changes the behavior of the `--key` parameter to represent a KMS key id rather than an on-disk rsa key file.

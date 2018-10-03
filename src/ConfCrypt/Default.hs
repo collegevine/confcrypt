@@ -11,6 +11,7 @@ import Data.Either (fromRight)
 import qualified Data.Map as M
 import qualified Data.Text as T
 
+-- | Printed out on request as an example or starting point for new users.
 defaultConf :: T.Text
 defaultConf = "# confcrypt schema#more things\n\
     \# Configuration parameters may be either a String, Int, or Boolean\n\
@@ -30,6 +31,7 @@ defaultConf = "# confcrypt schema#more things\n\
     \ TIMEOUT_MS : Int\n\
     \ TIMEOUT_MS = 300"
 
+-- | The standard empty config
 emptyConfCryptFile :: ConfCryptFile
 emptyConfCryptFile = ConfCryptFile {
     fileName = "empty",

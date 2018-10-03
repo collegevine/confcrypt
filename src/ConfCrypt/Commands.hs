@@ -9,7 +9,6 @@ module ConfCrypt.Commands (
     EditConfCrypt(..),
     DeleteConfCrypt(..),
     ValidateConfCrypt(..),
-    EncryptWholeConfCrypt(..),
     NewConfCrypt(..),
 
     -- | Exported for testing
@@ -84,7 +83,7 @@ processReadLines transformed ccFile =
     transformedLines = [(p, Edit)| p <- transformed]
 
 
-
+-- | Used to add a new config parameter to the file
 data AddConfCrypt = AddConfCrypt {aName :: T.Text, aValue :: T.Text, aType :: SchemaType}
     deriving (Eq, Read, Show, Generic)
 
@@ -168,13 +167,6 @@ instance (Monad m, MonadRandom m) => Command DeleteConfCrypt (ConfCryptM m ()) w
 data ValidateConfCrypt = ValidateConfCrypt
 instance (Monad m, MonadDecrypt (ConfCryptM m key) key) => Command ValidateConfCrypt (ConfCryptM m key) where
     evaluate _ = runAllRules
-
-data EncryptWholeConfCrypt = EncryptWholeConfCrypt
-instance (Monad m, MonadRandom m) => Command EncryptWholeConfCrypt (ConfCryptM m (TextKey RSA.PublicKey)) where
-    evaluate = undefined
-
-instance (RemoteEncryptC key) => Command EncryptWholeConfCrypt (RemoteConfCrypt key) where
-    evaluate = undefined
 
 data NewConfCrypt = NewConfCrypt
 instance Monad m => Command NewConfCrypt (ConfCryptM m ()) where
