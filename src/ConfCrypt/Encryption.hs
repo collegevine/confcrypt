@@ -140,7 +140,7 @@ instance (Monad m, MonadRandom m, MonadError ConfCryptError m) => MonadEncrypt m
 
 instance (MonadRandom m, MonadError ConfCryptError m, Monad m) =>
     MonadEncrypt m (TextKey RSA.PublicKey) where
-    encryptValue (TextKey key) value = encryptValue key value
+    encryptValue (TextKey key) = encryptValue key
 
 instance (MonadRandom m) => MonadRandom (ConfCryptM m k) where
     getRandomBytes = lift . lift . lift . lift . getRandomBytes

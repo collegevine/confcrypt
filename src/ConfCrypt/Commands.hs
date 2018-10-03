@@ -48,14 +48,6 @@ data FileAction
 class Monad m => Command a m where
     evaluate :: a -> m ()
 
-type LocalDecryptC key = (MonadDecrypt (Except ConfCryptError) key, LocalKey key)
-type LocalEncryptC m key = (MonadEncrypt m key, LocalKey key)
-type LocalConfCrypt m key = ConfCryptM m (TextKey key)
-
-type RemoteDecryptC key = (MonadDecrypt (RemoteConfCrypt key) (RemoteKey key), KMSKey key)
-type RemoteEncryptC key = (MonadEncrypt (RemoteConfCrypt key) (RemoteKey key), KMSKey key)
-type RemoteConfCrypt key = ConfCryptM IO (RemoteKey key)
-
 -- | Read and return the full contents of an encrypted file. Provides support for using a local RSA key or an externl KMS service
 data ReadConfCrypt = ReadConfCrypt
 instance (Monad m, MonadDecrypt (ConfCryptM m key) key) => Command ReadConfCrypt (ConfCryptM m key) where
