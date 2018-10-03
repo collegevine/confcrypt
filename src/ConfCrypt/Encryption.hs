@@ -112,23 +112,20 @@ toEncrypted = Encrypted
 class (Monad m, MonadError ConfCryptError m) => MonadDecrypt m k where
     decryptValue :: k -> T.Text -> m T.Text
 
-instance MonadDecrypt (Except ConfCryptError) RSA.PrivateKey where
+instance (Monad m, MonadError ConfCryptError m) => MonadDecrypt m RSA.PrivateKey where
     decryptValue _ "" = pure ""
     decryptValue privateKey encryptedValue =
         either (throwError . DecryptionError)
                (pure . T.decodeUtf8)
                (lMap (T.pack . show) . decrypt Nothing privateKey =<< unwrapBytes encryptedValue)
 
-instance MonadDecrypt (Except ConfCryptError) (TextKey RSA.PrivateKey) where
+instance (MonadError ConfCryptError m, Monad m) => MonadDecrypt m (TextKey RSA.PrivateKey) where
     decryptValue (TextKey key) = decryptValue key
 
-instance Monad m => MonadDecrypt (ConfCryptM m (TextKey RSA.PrivateKey)) (TextKey RSA.PrivateKey) where
-    decryptValue (TextKey key) val =
-        case runExcept $ decryptValue key val of
-            Left e -> throwError e
-            Right v -> pure v
 
-
+--
+-- Encryption
+--
 
 class (Monad m, MonadError ConfCryptError m) => MonadEncrypt m k where
     encryptValue :: k -> T.Text -> m T.Text
@@ -140,6 +137,10 @@ instance (Monad m, MonadRandom m, MonadError ConfCryptError m) => MonadEncrypt m
         either (throwError . EncryptionError)
                (pure . wrapBytes)
                res
+
+instance (MonadRandom m, MonadError ConfCryptError m, Monad m) =>
+    MonadEncrypt m (TextKey RSA.PublicKey) where
+    encryptValue (TextKey key) value = encryptValue key value
 
 instance (MonadRandom m) => MonadRandom (ConfCryptM m k) where
     getRandomBytes = lift . lift . lift . lift . getRandomBytes

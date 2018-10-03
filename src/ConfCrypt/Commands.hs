@@ -58,17 +58,7 @@ type RemoteConfCrypt key = ConfCryptM IO (RemoteKey key)
 
 -- | Read and return the full contents of an encrypted file. Provides support for using a local RSA key or an externl KMS service
 data ReadConfCrypt = ReadConfCrypt
-instance (Monad m, LocalDecryptC key) => Command ReadConfCrypt (LocalConfCrypt m key) where
-    evaluate _ = do
-        (ccFile, TextKey pk) <- ask
-        let params = parameters ccFile
-        transformed <- mapM (\p -> decryptedParam  p . runExcept $ decryptValue pk (paramValue p)) params
-        processReadLines transformed ccFile
-        where
-            decryptedParam param (Left e) = throwError e
-            decryptedParam param (Right v) = pure . ParameterLine $ ParamLine {pName = paramName param, pValue = v}
-
-instance (RemoteDecryptC key) => Command ReadConfCrypt (RemoteConfCrypt key) where
+instance (Monad m, MonadDecrypt (ConfCryptM m key) key) => Command ReadConfCrypt (ConfCryptM m key) where
     evaluate _ = do
         (ccFile, ctx) <- ask
         let params = parameters ccFile
@@ -87,13 +77,8 @@ processReadLines transformed ccFile =
 data AddConfCrypt = AddConfCrypt {aName :: T.Text, aValue :: T.Text, aType :: SchemaType}
     deriving (Eq, Read, Show, Generic)
 
-instance (Monad m, MonadRandom m, LocalEncryptC (LocalConfCrypt m key) key) => Command AddConfCrypt (LocalConfCrypt m key) where
-    evaluate ac@AddConfCrypt {aName, aValue, aType} =  do
-        (ccFile, TextKey pubKey) <- ask
-        rawEncrypted <- encryptValue pubKey aValue
-        addOutput ccFile ac rawEncrypted
-
-instance (RemoteEncryptC key) => Command AddConfCrypt (RemoteConfCrypt key) where
+instance (Monad m, MonadRandom m, MonadEncrypt (ConfCryptM m key) key) =>
+    Command AddConfCrypt (ConfCryptM m key) where
     evaluate ac@AddConfCrypt {aName, aValue, aType} =  do
         (ccFile, ctx ) <- ask
         addOutput ccFile ac =<< encryptValue ctx aValue
@@ -106,47 +91,39 @@ addOutput ccFile AddConfCrypt {aName, aValue, aType} encryptedValue = do
     where
         (pl, Just sl) = parameterToLines Parameter {paramName = aName, paramValue = aValue, paramType = Just aType}
 
-
-
+-- | Modify the value or type of a parameter in-place. This should result in a diff touching only the impacted lines.
+-- Very important that this property holds to make reviews easier.
 data EditConfCrypt = EditConfCrypt {eName:: T.Text, eValue :: T.Text, eType :: SchemaType}
     deriving (Eq, Read, Show, Generic)
 
-instance (Monad m, MonadRandom m, LocalEncryptC (LocalConfCrypt m key) key) => Command EditConfCrypt (LocalConfCrypt m key) where
-    --TODO this implementation is extremely similar 'Add', factor it out
+instance (Monad m, MonadRandom m, MonadEncrypt (ConfCryptM m key) key) =>
+    Command EditConfCrypt (ConfCryptM m key) where
     evaluate ec@EditConfCrypt {eName, eValue, eType} = do
-        (ccFile, TextKey pk) <- ask
+        (ccFile, ctx) <- ask
 
         -- Editing an existing parameter requires that the file is inplace. Its not difficult to fall back into
         -- 'add' behavior in the case where the parameter isn't present, but I'm not implementing that right now.
         unless ( any ((==) eName . paramName) $ parameters ccFile) $
             throwError $ UnknownParameter eName
 
-        rawEncrypted <- encryptValue pk eValue
+        rawEncrypted <- encryptValue ctx eValue
         editOutput ccFile ec rawEncrypted
-
-instance (RemoteEncryptC key) => Command EditConfCrypt (RemoteConfCrypt key) where
-    evaluate ec@EditConfCrypt {eName, eValue, eType} = do
-        (ccFile, pk) <- ask
-        -- See note above
-        unless ( any ((==) eName . paramName) $ parameters ccFile) $
-            throwError $ UnknownParameter eName
-
-        editOutput ccFile ec =<< encryptValue pk eValue
-
-editOutput ccFile EditConfCrypt {eName, eValue, eType} encryptedValue = do
-        let contents = fileContents ccFile
-            instructions = [(SchemaLine sl, Edit),
-                            (ParameterLine (pl {pValue = encryptedValue}), Edit)
-                           ]
-        newcontents <- genNewFileState contents instructions
-        writeFullContentsToBuffer False newcontents
         where
-            (pl, Just sl) = parameterToLines Parameter {paramName = eName, paramValue = eValue, paramType = Just eType}
+
+        editOutput ccFile EditConfCrypt {eName, eValue, eType} encryptedValue = do
+                let contents = fileContents ccFile
+                    instructions = [(SchemaLine sl, Edit),
+                                    (ParameterLine (pl {pValue = encryptedValue}), Edit)
+                                ]
+                newcontents <- genNewFileState contents instructions
+                writeFullContentsToBuffer False newcontents
+                where
+                    (pl, Just sl) = parameterToLines Parameter {paramName = eName, paramValue = eValue, paramType = Just eType}
 
 
 data DeleteConfCrypt = DeleteConfCrypt {dName:: T.Text}
     deriving (Eq, Read, Show, Generic)
-instance (Monad m, MonadRandom m) => Command DeleteConfCrypt (ConfCryptM m ()) where
+instance (Monad m) => Command DeleteConfCrypt (ConfCryptM m ()) where
     evaluate DeleteConfCrypt {dName} = do
         (ccFile, ()) <- ask
 
