@@ -93,8 +93,8 @@ run parsedArguments = do
 
 
 runConfCrypt ::
-    ConfCryptFile ->
-    ConfCryptM IO () a
+    ConfCryptFile
+    -> ConfCryptM IO () a
     -> IO (Either ConfCryptError [T.Text])
 runConfCrypt file action =
     runResourceT . runExceptT . execWriterT  $ runReaderT action (file, ())

@@ -71,7 +71,7 @@ executables:
     - optparse-applicative
     default-extensions: MultiParamTypeClasses OverloadedStrings FlexibleContexts FlexibleInstances NamedFieldPuns
         TupleSections ExistentialQuantification TypeApplications UndecidableInstances BangPatterns ViewPatterns
-
+        GADTs
 tests:
   confcrypt-test:
     main:                Tests.hs
