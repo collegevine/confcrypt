@@ -9,6 +9,7 @@ module ConfCrypt.CLI.API (
 import ConfCrypt.Types (SchemaType(..))
 import ConfCrypt.Commands (AddConfCrypt(..), EditConfCrypt(..), DeleteConfCrypt(..))
 
+import Data.Monoid ((<>))
 import Options.Applicative
 import qualified Data.Text as T
 
@@ -134,5 +135,3 @@ getProvider = flag LocalRSA AWS (
     long "use-aws" <>
     help "Toggles whether the --key indicates an RSA keyfile or an AWS KMS key identifer"
     )
-
-

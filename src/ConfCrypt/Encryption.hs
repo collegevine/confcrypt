@@ -30,7 +30,7 @@ import Control.Lens (view)
 import Control.Monad.Trans (lift, liftIO, MonadIO)
 import Control.Monad.Trans.Class (MonadTrans)
 import Control.Monad.Except (MonadError, throwError, Except, ExceptT, runExcept)
-import Conduit (MonadResource, MonadThrow)
+import Control.Monad.Trans.Resource (MonadResource, MonadThrow)
 import Crypto.PubKey.OpenSsh (OpenSshPublicKey(..), OpenSshPrivateKey(..), decodePublic, decodePrivate)
 import qualified Crypto.PubKey.RSA.Types as RSA
 import Crypto.Types.PubKey.RSA (PrivateKey(..), PublicKey(..))

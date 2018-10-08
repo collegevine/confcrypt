@@ -10,10 +10,10 @@ import ConfCrypt.Default (emptyConfCryptFile)
 import ConfCrypt.Providers.AWS
 import ConfCrypt.CLI.API
 
-import Conduit (ResourceT, runResourceT)
 import Control.Exception (catch)
 import Control.DeepSeq (force)
 import Control.Monad.Trans (MonadIO)
+import Control.Monad.Trans.Resource (ResourceT, runResourceT)
 import Control.Monad.Reader (MonadReader, ReaderT, runReaderT, withReaderT)
 import Control.Monad.Except (MonadError, ExceptT, runExceptT)
 import Control.Monad.Writer (MonadWriter, WriterT, execWriterT)

@@ -38,6 +38,7 @@ dependencies:
 - amazonka-kms
 - lens
 - conduit
+- resourcet
 
 library:
   source-dirs: src

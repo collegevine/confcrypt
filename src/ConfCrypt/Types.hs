@@ -1,8 +1,8 @@
 module ConfCrypt.Types where
 
-import Conduit (ResourceT)
 import Control.Monad.Reader (MonadReader, ReaderT, runReaderT)
 import Control.Monad.Except (MonadError, ExceptT, runExceptT)
+import Control.Monad.Trans.Resource (ResourceT)
 import Control.Monad.Writer (MonadWriter, WriterT, execWriterT)
 import Control.DeepSeq (NFData)
 import qualified Crypto.PubKey.RSA.Types as RSA

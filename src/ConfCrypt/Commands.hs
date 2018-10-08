@@ -33,6 +33,7 @@ import Control.Monad.Writer (tell, MonadWriter)
 import Crypto.Random (MonadRandom)
 import Data.Foldable (foldrM, traverse_)
 import Data.List (sortOn)
+import Data.Monoid ((<>))
 import GHC.Generics (Generic)
 import qualified Crypto.PubKey.RSA.Types as RSA
 import qualified Data.Text as T

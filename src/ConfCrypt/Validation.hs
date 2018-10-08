@@ -16,6 +16,7 @@ import Control.Monad.Reader (MonadReader, ask)
 import Data.Char (isDigit)
 import Data.Foldable (traverse_)
 import Data.Maybe (isNothing)
+import Data.Monoid ((<>))
 import qualified Data.Text as T
 import qualified Data.Map as M
 
@@ -72,4 +73,3 @@ logMissingParameters ConfCryptFile {fileContents} =
             | M.null $ M.filterWithKey (\k _ -> paramForName sName k) fileContents  = tell ["Error: no matching parameter for schema "<> sName]
             | otherwise = pure ()
         logMissingParameter _ =  pure ()
-
