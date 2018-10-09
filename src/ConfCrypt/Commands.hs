@@ -10,6 +10,7 @@ module ConfCrypt.Commands (
     DeleteConfCrypt(..),
     ValidateConfCrypt(..),
     NewConfCrypt(..),
+    ExportConfCrypt(..),
 
     -- | Exported for testing
     genNewFileState,
@@ -31,7 +32,7 @@ import Control.Monad.Reader (ask)
 import Control.Monad.Except (throwError, runExcept, MonadError, Except)
 import Control.Monad.Writer (tell, MonadWriter)
 import Crypto.Random (MonadRandom)
-import Data.Foldable (foldrM, traverse_)
+import Data.Foldable (foldrM, traverse_, for_)
 import Data.List (sortOn)
 import Data.Monoid ((<>))
 import GHC.Generics (Generic)
@@ -143,6 +144,19 @@ instance Monad m => Command NewConfCrypt (ConfCryptM m ()) where
     evaluate _ =
         writeFullContentsToBuffer False (fileContents defaultLines)
 
+data ExportConfCrypt = ExportConfCrypt
+instance (Monad m, MonadDecrypt (ConfCryptM m key) key) => Command ExportConfCrypt (ConfCryptM m key) where
+    evaluate _ = do
+        (ccFile, ctx) <- ask
+        let params = parameters ccFile
+        transformed <- mapM (\p -> decryptedParam  p <$> decryptValue ctx (paramValue p)) params
+        for_ transformed $ \l ->
+            case l of
+                ParameterLine ParamLine {pName, pValue} -> tell ["export " <> pName <> "=" <> "\"" <> pValue <> "\""]
+                _ -> pure ()
+
+        where
+            decryptedParam param v = ParameterLine ParamLine {pName = paramName param, pValue = v}
 
 -- | Given a known file state and some edits, apply the edits and produce the new file contents
 genNewFileState :: (Monad m, MonadError ConfCryptError m) =>

@@ -51,6 +51,8 @@ run parsedArguments = do
                     runConfCrypt parsedConfiguration $ runWithDecrypt key provider ReadConfCrypt
                 VC KeyAndConf {key, provider} ->
                     runConfCrypt parsedConfiguration $ runWithDecrypt key provider ValidateConfCrypt
+                PC KeyAndConf {key, provider} ->
+                    runConfCrypt parsedConfiguration $ runWithDecrypt key provider ExportConfCrypt
 
                 -- Requires Encryption
                 AC KeyAndConf {key, provider} cmd ->
@@ -104,4 +106,5 @@ confFilePath  (RC KeyAndConf {conf}) = conf
 confFilePath  (VC KeyAndConf {conf}) = conf
 confFilePath  (AC KeyAndConf {conf} _) = conf
 confFilePath  (EC KeyAndConf {conf} _) = conf
+confFilePath  (PC KeyAndConf {conf}) = conf
 confFilePath  (DC (Conf conf) _) = conf

@@ -24,6 +24,7 @@ data AnyCommand
     | EC KeyAndConf EditConfCrypt
     | DC Conf DeleteConfCrypt
     | VC KeyAndConf
+    | PC KeyAndConf
     | NC
     deriving (Eq, Show)
 
@@ -53,6 +54,8 @@ commandParser = hsubparser
         command "validate" validate
         <>
         command "new" new
+        <>
+        command "export" export
     )
 
 add :: ParserInfo AnyCommand
@@ -84,6 +87,11 @@ new :: ParserInfo AnyCommand
 new  = info (pure NC)
             (progDesc "Produce a new boilerplate confcrypt file. This should be piped into your desired config." <>
              fullDesc)
+
+export :: ParserInfo AnyCommand
+export = info (PC <$> keyAndConf)
+         (progDesc "Produce an export bash script that can be sourced to inject config variables into environment" <>
+          fullDesc)
 
 keyAndConf :: Parser KeyAndConf
 keyAndConf =
