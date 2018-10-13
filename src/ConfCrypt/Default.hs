@@ -1,6 +1,18 @@
+-- |
+-- Module:          ConfCrypt.Default
+-- Copyright:       (c) 2018 Chris Coffey
+--                  (c) 2018 CollegeVine
+-- License:         MIT
+-- Maintainer:      Chris Coffey
+-- Stability:       experimental
+-- Portability:     portable
+
+
 module ConfCrypt.Default (
+    -- * Defaults
     defaultConf,
     defaultLines,
+    -- * Exported for testing
     emptyConfCryptFile
     ) where
 
@@ -39,5 +51,6 @@ emptyConfCryptFile = ConfCryptFile {
     parameters = []
     }
 
+-- | Extracts the plaintext from 'defaultConf' into a populated config
 defaultLines :: ConfCryptFile
 defaultLines = fromRight emptyConfCryptFile $ parseConfCrypt "default Config" defaultConf

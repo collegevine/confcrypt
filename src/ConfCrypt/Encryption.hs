@@ -1,14 +1,26 @@
+-- |
+-- Module:          ConfCrypt.Encryption
+-- Copyright:       (c) 2018 Chris Coffey
+--                  (c) 2018 CollegeVine
+-- License:         MIT
+-- Maintainer:      Chris Coffey
+-- Stability:       experimental
+-- Portability:     portable
+--
+-- This exposes the interface and instances for handling encryption/decryption. The interface for
+-- each operation is intentionally split.
+
 module ConfCrypt.Encryption (
 
-    -- | Working with RSA keys
+    -- * Working with RSA keys
     KeyProjection,
     project,
     TextKey(..),
 
-    -- | Working with KMS keys
+    --  * Working with KMS keys
     RemoteKey(..),
 
-    -- | Working with values
+    -- * Working with values
     Encrypted,
     renderEncrypted,
     MonadEncrypt,
@@ -16,10 +28,10 @@ module ConfCrypt.Encryption (
     MonadDecrypt,
     decryptValue,
 
-    -- | Utilities
+    -- * Utilities
     loadRSAKey,
 
-    -- | Exported for Testing
+    -- ** Exported for Testing
     unpackPrivateRSAKey
     ) where
 
@@ -45,6 +57,7 @@ import qualified Control.Monad.Trans.AWS as AWS
 import qualified Network.AWS.KMS.Encrypt as AWS
 import qualified Network.AWS.KMS.Decrypt as AWS
 
+-- | Represents the textual contents of any key stored on the local machine
 data TextKey key where
     TextKey :: LocalKey key => key -> TextKey key
 
@@ -110,6 +123,8 @@ toEncrypted = Encrypted
 
 -- | Decrypts an encrypted block of text
 class (Monad m, MonadError ConfCryptError m) => MonadDecrypt m k where
+    -- | Given a key and some encrypted ciphertext, returns either the decrypted plaintext or
+    -- raises a 'ConfCryptError'
     decryptValue :: k -> T.Text -> m T.Text
 
 instance (Monad m, MonadError ConfCryptError m) => MonadDecrypt m RSA.PrivateKey where
@@ -127,7 +142,9 @@ instance (MonadError ConfCryptError m, Monad m) => MonadDecrypt m (TextKey RSA.P
 -- Encryption
 --
 
+-- | The interface for encrypting a value is simply a function from a key + plaintext -> ciphertext.
 class (Monad m, MonadError ConfCryptError m) => MonadEncrypt m k where
+    -- | Encrypts a value and either returns the ciphertext or throws a 'ConfCryptError'
     encryptValue :: k -> T.Text -> m T.Text
 
 instance (Monad m, MonadRandom m, MonadError ConfCryptError m) => MonadEncrypt m RSA.PublicKey where
@@ -152,6 +169,8 @@ instance (MonadRandom m) => MonadRandom (ExceptT e m) where
 --
 -- KMS Support
 --
+
+-- | Represents a KMS key remotely managed by a third party service provider.
 data RemoteKey key where
     RemoteKey :: KMSKey key => key -> RemoteKey key
 

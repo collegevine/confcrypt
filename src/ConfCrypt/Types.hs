@@ -1,4 +1,38 @@
-module ConfCrypt.Types where
+-- |
+-- Module:          ConfCrypt.Types
+-- Copyright:       (c) 2018 Chris Coffey
+--                  (c) 2018 CollegeVine
+-- License:         MIT
+-- Maintainer:      Chris Coffey
+-- Stability:       experimental
+-- Portability:     portable
+--
+-- Core types and some small helper functions used to construct ConfCrypt.
+module ConfCrypt.Types (
+    -- * Core types
+    ConfCryptM,
+    -- ** Errors
+    ConfCryptError(..),
+    -- ** Runtime Environment
+    ConfCryptFile(..),
+    Parameter(..),
+    -- ** File Format
+    ConfCryptElement(..),
+    LineNumber(..),
+    SchemaType(..),
+    ParamLine(..),
+    Schema(..),
+
+    -- ** Key constraints
+    LocalKey,
+    KMSKey,
+
+    -- * Helpers
+    unWrapSchema,
+    isParameter,
+    typeToOutputString,
+    parameterToLines
+) where
 
 import Conduit (ResourceT)
 import Control.Monad.Reader (MonadReader, ReaderT, runReaderT)
@@ -10,6 +44,8 @@ import GHC.Generics (Generic)
 import qualified Data.Text as T
 import qualified Data.Map.Strict as M
 
+-- | The core transformer stack for ConfCrypt. The most important parts are the 'ReaderT' and
+-- 'ResourceT', as the 'WriterT' and 'ExceptT' can both be replaced with explicit return types.
 type ConfCryptM m ctx =
     ReaderT (ConfCryptFile, ctx) (
             WriterT [T.Text] (
@@ -18,7 +54,7 @@ type ConfCryptM m ctx =
                 )
         )
 
-
+-- | The possible errors produced during a confcrypt operation.
 data ConfCryptError
     = ParserError T.Text
     | NonRSAKey
@@ -36,6 +72,7 @@ data ConfCryptError
 instance Ord RSA.Error where
     (<=) l r = show l <= show r
 
+-- | As indicated in the Readme, a ConfCrypt file
 data ConfCryptFile =
     ConfCryptFile {
         fileName :: T.Text,
@@ -43,6 +80,8 @@ data ConfCryptFile =
         parameters :: [Parameter]
         } deriving (Show, Generic, NFData)
 
+-- | The syntax used to describe a confcrypt file. A line in a confcrypt file may be one of 'Schema',
+-- 'ParamLine', or comment. The grammar itself is described in the readme and 'Confcrypt.Parser'.
 data ConfCryptElement
     = SchemaLine Schema
     | CommentLine {cText ::T.Text}
@@ -57,7 +96,7 @@ instance Eq ConfCryptElement where
     (==) (CommentLine l) (CommentLine r) = l == r
     (==) _ _ = False
 
--- | TODO ccoffey talk about this as a gotcha. The requirement is that for two
+-- | In order to
 instance Ord ConfCryptElement where
     (<=) (SchemaLine l) (SchemaLine r) = sName l <= sName r
     (<=) (SchemaLine l) (CommentLine _) = False
@@ -69,25 +108,31 @@ instance Ord ConfCryptElement where
     (<=) (CommentLine l) (ParameterLine _) = True
     (<=) (CommentLine l) (SchemaLine _) = True
 
+-- | A parameter consists of both a 'ParamLine' and 'Schema' line from the confcr
 data Parameter = Parameter {paramName :: T.Text, paramValue :: T.Text, paramType :: Maybe SchemaType}
     deriving (Eq, Ord, Show, Generic, NFData)
+
+-- | A parsed parameter line from a confcrypt file
 data ParamLine = ParamLine {pName :: T.Text, pValue :: T.Text}
     deriving (Eq, Ord, Show, Generic, NFData)
+
+-- | A parsed schema line from a confcrypt file
 data Schema = Schema {sName :: T.Text, sType :: SchemaType}
     deriving (Eq, Ord, Show, Generic, NFData)
 
+-- | Self explanitory
 newtype LineNumber = LineNumber Int
     deriving (Eq, Ord, Show, Generic, NFData)
 
+-- | Indicates which types a
 data SchemaType
-    = CString
-    | CInt
-    | CBoolean
+    = CString -- ^ Maps to 'String'
+    | CInt -- ^ Maps to 'Int'
+    | CBoolean -- ^ Maps to 'Bool'
     deriving (Eq, Ord, Show, Generic, NFData, Read)
 
-class LocalKey key
-class KMSKey key
 
+-- | A special purpose 'Show' function for convert
 typeToOutputString ::
     SchemaType
     -> T.Text
@@ -102,10 +147,20 @@ parameterToLines ::
 parameterToLines Parameter {paramName, paramValue, paramType} =
     (ParamLine paramName paramValue, Schema paramName <$> paramType)
 
+-- | Checks whether the provided line from a confcrypt file is a 'Parameter'
 isParameter :: ConfCryptElement -> Bool
 isParameter (ParameterLine _) = True
 isParameter _ = False
 
+-- | Attempts to unwrap a line from a confcrypt file into a 'Schema'
 unWrapSchema :: ConfCryptElement -> Maybe Schema
 unWrapSchema (SchemaLine s) = Just s
 unWrapSchema _ = Nothing
+
+-- | This constraint provides a type-level check that the wrapped key type is local to the
+-- current machine. For use with things like RSA keys.
+class LocalKey key
+
+-- | This constraint provides a type-level check that the wrapped key type exists off-system inside
+-- an externally provided Key Management System (KMS). For use with AWS KMS or Azure KMS.
+class KMSKey key

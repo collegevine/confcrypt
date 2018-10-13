@@ -1,3 +1,12 @@
+-- |
+-- Module:          ConfCrypt.Parser
+-- Copyright:       (c) 2018 Chris Coffey
+--                  (c) 2018 CollegeVine
+-- License:         MIT
+-- Maintainer:      Chris Coffey
+-- Stability:       experimental
+-- Portability:     portable
+--
 module ConfCrypt.Parser (
     parseConfCrypt
 ) where
@@ -16,7 +25,9 @@ import qualified Data.Set as S
 
 type Parser = Parsec ConfCryptError T.Text
 
--- | Duplicates are removed by virtue of using a 'Map'. This means the behavior for having duplciate
+-- | Parse raw 'Text' into a 'ConfCryptFile'.
+--
+-- Duplicates are removed by virtue of using a 'Map'. This means the behavior for having duplciate
 -- parameter names is officially undefined, but as implemented the last parameter read will be preserved.
 -- DO NOT RELY ON THIS BEHAVIOR!
 parseConfCrypt ::

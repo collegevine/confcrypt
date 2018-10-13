@@ -1,7 +1,18 @@
+-- |
+-- Module:          ConfCrypt.Validation
+-- Copyright:       (c) 2018 Chris Coffey
+--                  (c) 2018 CollegeVine
+-- License:         MIT
+-- Maintainer:      Chris Coffey
+-- Stability:       experimental
+-- Portability:     portable
+
+
 module ConfCrypt.Validation (
+    -- * Rule validation
     runAllRules,
 
-    -- | Individual rules
+    -- ** Individual rules
     parameterTypesMatchSchema,
     logMissingSchemas,
     logMissingParameters
@@ -19,7 +30,11 @@ import Data.Maybe (isNothing)
 import qualified Data.Text as T
 import qualified Data.Map as M
 
-runAllRules :: (MonadDecrypt m key, Monad m, MonadWriter [T.Text] m, MonadReader (ConfCryptFile, key) m) =>
+-- | Apply all validation rules, accumulating the errors across rules.
+runAllRules :: (MonadDecrypt m key,
+    Monad m,
+    MonadWriter [T.Text] m,
+    MonadReader (ConfCryptFile, key) m) =>
     m ()
 runAllRules = do
     (ccf, privateKey) <- ask
@@ -47,6 +62,7 @@ parameterTypesMatchSchema key ConfCryptFile {parameters} =
                 Just CString | T.null val -> tell ["Warning: "<> paramName <> " is empty"]
                 Just pt -> tell ["Error: "<> paramName <> " does not match the schema type " <> typeToOutputString pt]
 
+-- | Raise an error if there are parameters without a schema
 logMissingSchemas :: (Monad m, MonadWriter [T.Text] m) =>
     ConfCryptFile
     -> m ()
@@ -57,6 +73,7 @@ logMissingSchemas ConfCryptFile {parameters} =
             | isNothing paramType = tell ["Error: " <> paramName <> " does not have a scheam"]
             | otherwise = pure ()
 
+-- | Raise an error if there are schema without a parameter
 logMissingParameters :: (Monad m, MonadWriter [T.Text] m) =>
     ConfCryptFile
     -> m ()

@@ -1,9 +1,9 @@
 module ConfCrypt.Commands (
-    -- | Command class
+    -- * Commands
     Command,
     evaluate,
 
-    -- | Supported Commands
+    -- * Supported Commands
     ReadConfCrypt(..),
     AddConfCrypt(..),
     EditConfCrypt(..),
@@ -11,11 +11,11 @@ module ConfCrypt.Commands (
     ValidateConfCrypt(..),
     NewConfCrypt(..),
 
-    -- | Exported for testing
+    -- * Utilities
+    FileAction(..),
+    -- ** Exported for testing
     genNewFileState,
-    writeFullContentsToBuffer,
-
-    FileAction(..)
+    writeFullContentsToBuffer
     ) where
 
 import ConfCrypt.Default (defaultLines)
@@ -39,12 +39,17 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import qualified Data.Map as M
 
-
+-- | Commands may perform one of the following operations to a line of a confcrypt file
 data FileAction
     = Add
     | Edit
     | Remove
 
+-- | All confcrypt commands can be generalized into an 'evaluate' call. In reality, instances likely
+-- need to provide some environment, although that's not required as everything could be contained
+-- as record fields of the command argument itself.
+--
+-- In reality the return type of 'evalutate' is 'Text', this needs to be cleaned up in the upcoming version.
 class Monad m => Command a m where
     evaluate :: a -> m ()
 
@@ -59,10 +64,11 @@ instance (Monad m, MonadDecrypt (ConfCryptM m key) key) => Command ReadConfCrypt
         where
             decryptedParam param v = ParameterLine ParamLine {pName = paramName param, pValue = v}
 
-processReadLines transformed ccFile =
-        writeFullContentsToBuffer False =<<  genNewFileState (fileContents ccFile) transformedLines
-    where
-    transformedLines = [(p, Edit)| p <- transformed]
+            -- Given a transformation, apply it to the current file contents then write them to the output buffer
+            processReadLines transformed ccFile =
+                    writeFullContentsToBuffer False =<<  genNewFileState (fileContents ccFile) transformedLines
+                where
+                transformedLines = [(p, Edit)| p <- transformed]
 
 
 -- | Used to add a new config parameter to the file
@@ -73,15 +79,13 @@ instance (Monad m, MonadRandom m, MonadEncrypt (ConfCryptM m key) key) =>
     Command AddConfCrypt (ConfCryptM m key) where
     evaluate ac@AddConfCrypt {aName, aValue, aType} =  do
         (ccFile, ctx ) <- ask
-        addOutput ccFile ac =<< encryptValue ctx aValue
-
-addOutput ccFile AddConfCrypt {aName, aValue, aType} encryptedValue = do
-    let contents = fileContents ccFile
-        instructions = [(SchemaLine sl, Add), (ParameterLine (pl {pValue = encryptedValue}), Add)]
-    newcontents <- genNewFileState contents instructions
-    writeFullContentsToBuffer False newcontents
-    where
-        (pl, Just sl) = parameterToLines Parameter {paramName = aName, paramValue = aValue, paramType = Just aType}
+        encryptedValue <- encryptValue ctx aValue
+        let contents = fileContents ccFile
+            instructions = [(SchemaLine sl, Add), (ParameterLine (pl {pValue = encryptedValue}), Add)]
+        newcontents <- genNewFileState contents instructions
+        writeFullContentsToBuffer False newcontents
+        where
+            (pl, Just sl) = parameterToLines Parameter {paramName = aName, paramValue = aValue, paramType = Just aType}
 
 -- | Modify the value or type of a parameter in-place. This should result in a diff touching only the impacted lines.
 -- Very important that this property holds to make reviews easier.
@@ -101,7 +105,8 @@ instance (Monad m, MonadRandom m, MonadEncrypt (ConfCryptM m key) key) =>
         rawEncrypted <- encryptValue ctx eValue
         editOutput ccFile ec rawEncrypted
         where
-
+        -- Editing consists of replacing the encrypted value assocaited and type assocaited with a given parameter
+        -- then writing the changes as in-place updates to the file.
         editOutput ccFile EditConfCrypt {eName, eValue, eType} encryptedValue = do
                 let contents = fileContents ccFile
                     instructions = [(SchemaLine sl, Edit),
@@ -112,7 +117,8 @@ instance (Monad m, MonadRandom m, MonadEncrypt (ConfCryptM m key) key) =>
                 where
                     (pl, Just sl) = parameterToLines Parameter {paramName = eName, paramValue = eValue, paramType = Just eType}
 
-
+-- | Removes a particular parameter and schema from the config file. This does not require an encryption key because the
+-- lines may simply be deleted based on the parameter name.
 data DeleteConfCrypt = DeleteConfCrypt {dName:: T.Text}
     deriving (Eq, Read, Show, Generic)
 instance (Monad m) => Command DeleteConfCrypt (ConfCryptM m ()) where
@@ -132,11 +138,13 @@ instance (Monad m) => Command DeleteConfCrypt (ConfCryptM m ()) where
             findNamedLine (ParameterLine ParamLine {pName}) _ = dName == pName
             findNamedLine _ _ = False
 
--- TODO consider using this style of constraint for all other instances
+-- | Run all of the rules in 'ConfCrypt.Validation' on this file.
 data ValidateConfCrypt = ValidateConfCrypt
 instance (Monad m, MonadDecrypt (ConfCryptM m key) key) => Command ValidateConfCrypt (ConfCryptM m key) where
     evaluate _ = runAllRules
 
+-- | Dumps the contents of 'defaultLines' to the output buffer. This is the same example config used
+-- in the readme.
 data NewConfCrypt = NewConfCrypt
 instance Monad m => Command NewConfCrypt (ConfCryptM m ()) where
     evaluate _ =
@@ -176,6 +184,8 @@ genNewFileState fileContents ((line, action):rest) =
     where
         mLine l = M.filterWithKey (\k _ -> k == l) fileContents
 
+-- | Writes the provided 'ConfCryptFile' (provided as a Map) to the output buffer in line-number order. This
+-- allows for producing an easily diffable output and makes in-place edits easy to spot in source control diffs.
 writeFullContentsToBuffer :: (Monad m, MonadWriter [T.Text] m) =>
     Bool
     -> M.Map ConfCryptElement LineNumber
@@ -186,13 +196,13 @@ writeFullContentsToBuffer wrap contents =
         sortedLines = fmap fst . sortOn snd $ M.toList contents
         singleton x = [x]
 
-toDisplayLine ::
-    Bool
-    -> ConfCryptElement
-    -> T.Text
-toDisplayLine _ (CommentLine comment) = "# " <> comment
-toDisplayLine _ (SchemaLine (Schema name tpe)) = name <> " : " <> typeToOutputString tpe
-toDisplayLine wrap (ParameterLine (ParamLine name val)) = name <> " = " <> if wrap then wrapEncryptedValue val else val
+        toDisplayLine ::
+            Bool
+            -> ConfCryptElement
+            -> T.Text
+        toDisplayLine _ (CommentLine comment) = "# " <> comment
+        toDisplayLine _ (SchemaLine (Schema name tpe)) = name <> " : " <> typeToOutputString tpe
+        toDisplayLine wrap (ParameterLine (ParamLine name val)) = name <> " = " <> if wrap then wrapEncryptedValue val else val
 
 
 -- TODO remove this
