@@ -5,6 +5,7 @@ module ConfCrypt.Commands (
 
     -- * Supported Commands
     ReadConfCrypt(..),
+    GetConfCrypt(..),
     AddConfCrypt(..),
     EditConfCrypt(..),
     DeleteConfCrypt(..),
@@ -25,14 +26,14 @@ import ConfCrypt.Validation (runAllRules)
 import ConfCrypt.Providers.AWS (AWSCtx)
 
 import Control.Arrow (second)
-import Control.Monad (unless)
+import Control.Monad (unless, (<=<))
 import Control.Monad.Trans (lift)
 import Control.Monad.Reader (ask)
 import Control.Monad.Except (throwError, runExcept, MonadError, Except)
 import Control.Monad.Writer (tell, MonadWriter)
 import Crypto.Random (MonadRandom)
 import Data.Foldable (foldrM, traverse_)
-import Data.List (sortOn)
+import Data.List (find, sortOn)
 import GHC.Generics (Generic)
 import qualified Crypto.PubKey.RSA.Types as RSA
 import qualified Data.Text as T
@@ -70,6 +71,17 @@ instance (Monad m, MonadDecrypt (ConfCryptM m key) key) => Command ReadConfCrypt
                 where
                 transformedLines = [(p, Edit)| p <- transformed]
 
+-- | Used to get the decrypted value of a single encrypted config parameter
+data GetConfCrypt = GetConfCrypt {gName :: T.Text}
+    deriving (Eq, Read, Show, Generic)
+
+instance (Monad m, MonadDecrypt (ConfCryptM m key) key) => Command GetConfCrypt (ConfCryptM m key) where
+    evaluate (GetConfCrypt name) = do
+        (ccFile, ctx) <- ask
+        let mParam = find ((==name) . paramName) (parameters ccFile)
+        traverse_ (decrypt ctx) mParam
+        where
+            decrypt ctx = tell . pure <=< decryptValue ctx . paramValue
 
 -- | Used to add a new config parameter to the file
 data AddConfCrypt = AddConfCrypt {aName :: T.Text, aValue :: T.Text, aType :: SchemaType}

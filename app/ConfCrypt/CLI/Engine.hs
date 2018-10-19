@@ -49,6 +49,8 @@ run parsedArguments = do
                 -- Requires Decryption
                 RC KeyAndConf {key, provider} ->
                     runConfCrypt parsedConfiguration $ runWithDecrypt key provider ReadConfCrypt
+                GC KeyAndConf {key, provider} cmd ->
+                    runConfCrypt parsedConfiguration $ runWithDecrypt key provider cmd
                 VC KeyAndConf {key, provider} ->
                     runConfCrypt parsedConfiguration $ runWithDecrypt key provider ValidateConfCrypt
 
@@ -101,6 +103,7 @@ runConfCrypt file action =
 
 confFilePath :: AnyCommand -> FilePath
 confFilePath  (RC KeyAndConf {conf}) = conf
+confFilePath  (GC KeyAndConf {conf} _) = conf
 confFilePath  (VC KeyAndConf {conf}) = conf
 confFilePath  (AC KeyAndConf {conf} _) = conf
 confFilePath  (EC KeyAndConf {conf} _) = conf

@@ -3,7 +3,7 @@ module ConfCrypt.CLI.API.Tests (
     ) where
 
 import ConfCrypt.CLI.API
-import ConfCrypt.Commands (AddConfCrypt(..), EditConfCrypt(..), DeleteConfCrypt(..))
+import ConfCrypt.Commands (GetConfCrypt(..), AddConfCrypt(..), EditConfCrypt(..), DeleteConfCrypt(..))
 import ConfCrypt.Types
 
 import ConfCrypt.Common
@@ -23,6 +23,7 @@ cliAPITests = testGroup "cli api" [
 apiTests :: TestTree
 apiTests = testGroup "specific cases" [
     readCases,
+    getCases,
     addCases,
     editCases,
     deleteCases,
@@ -60,6 +61,40 @@ readCases = testGroup "read" [
             Success (RC (KeyAndConf "testKey" LocalRSA "test.econf") ) -> assertBool "can't fail" True
             Success a -> assertFailure ("Incorrectly parsed: "<> show a)
             Failure _ -> assertFailure "Should have parsed an RC"
+            CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
+    ]
+
+getCases :: TestTree
+getCases = testGroup "get" [
+    testCase "get requires a key" $ do
+        let args = ["get", "--name", "Test", "test.econf"]
+            res = execParserPure defaultPrefs cliParser args
+        case res of
+            Failure _ -> assertBool "can't fail" True
+            Success a -> assertFailure ("Incorrectly parsed: "<> show a)
+            CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
+    ,testCase "get requires a config file" $ do
+        let args = ["get", "--key", "testKey", "--name", "Test"]
+            res = execParserPure defaultPrefs cliParser args
+        case res of
+            Failure _ -> assertBool "can't fail" True
+            Success a -> assertFailure ("Incorrectly parsed: "<> show a)
+            CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
+   ,testCase "get preserves the provided key file with -k" $ do
+        let args = ["get", "-k", "testKey", "--name", "Test", "test.econf"]
+            res = execParserPure defaultPrefs cliParser args
+        case res of
+            Success (GC (KeyAndConf "testKey" LocalRSA "test.econf") (GetConfCrypt "Test")) -> assertBool "can't fail" True
+            Success a -> assertFailure ("Incorrectly parsed: "<> show a)
+            Failure _ -> assertFailure "Should have parsed a GC"
+            CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
+   ,testCase "get preserves the provided key file with --key" $ do
+        let args = ["get", "--key", "testKey", "--name", "Test", "test.econf"]
+            res = execParserPure defaultPrefs cliParser args
+        case res of
+            Success (GC (KeyAndConf "testKey" LocalRSA "test.econf") (GetConfCrypt "Test")) -> assertBool "can't fail" True
+            Success a -> assertFailure ("Incorrectly parsed: "<> show a)
+            Failure _ -> assertFailure "Should have parsed a GC"
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
     ]
 
