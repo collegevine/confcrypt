@@ -7,7 +7,7 @@ module ConfCrypt.CLI.API (
 ) where
 
 import ConfCrypt.Types (SchemaType(..))
-import ConfCrypt.Commands (AddConfCrypt(..), EditConfCrypt(..), DeleteConfCrypt(..))
+import ConfCrypt.Commands (GetConfCrypt(..), AddConfCrypt(..), EditConfCrypt(..), DeleteConfCrypt(..))
 
 import Options.Applicative
 import qualified Data.Text as T
@@ -19,6 +19,7 @@ newtype Conf = Conf FilePath
 
 data AnyCommand
     = RC KeyAndConf
+    | GC KeyAndConf GetConfCrypt
     | AC KeyAndConf AddConfCrypt
     | EC KeyAndConf EditConfCrypt
     | DC Conf DeleteConfCrypt
@@ -49,6 +50,8 @@ commandParser = hsubparser
         <>
         command "read" readConf
         <>
+        command "get" get
+        <>
         command "validate" validate
         <>
         command "new" new
@@ -72,6 +75,11 @@ delete = info ( DC <$> getConf <*> (DeleteConfCrypt <$> onlyName))
 readConf :: ParserInfo AnyCommand
 readConf = info ( RC <$> keyAndConf )
            (progDesc "Read in the provided config and decrypt it with the key. Results are printed to StdOut." <>
+            fullDesc)
+
+get :: ParserInfo AnyCommand
+get = info ( GC <$> keyAndConf <*> (GetConfCrypt <$> onlyName))
+            (progDesc "Get a single parameter value from the configuration file." <>
             fullDesc)
 
 validate :: ParserInfo AnyCommand
