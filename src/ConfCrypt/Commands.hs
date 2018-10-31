@@ -58,7 +58,7 @@ class Monad m => Command a m where
 
 -- | Read and return the full contents of an encrypted file. Provides support for using a local RSA key or an externl KMS service
 data ReadConfCrypt = ReadConfCrypt
-instance (MonadIO m, MonadDecrypt (ConfCryptM m key) key) => Command ReadConfCrypt (ConfCryptM m key) where
+instance (Monad m, MonadDecrypt (ConfCryptM m key) key) => Command ReadConfCrypt (ConfCryptM m key) where
     evaluate _ = do
         (ccFile, ctx) <- ask
         let params = parameters ccFile
@@ -89,7 +89,7 @@ instance (Monad m, MonadDecrypt (ConfCryptM m key) key) => Command GetConfCrypt 
 data AddConfCrypt = AddConfCrypt {aName :: T.Text, aValue :: T.Text, aType :: SchemaType}
     deriving (Eq, Read, Show, Generic)
 
-instance (MonadIO m, MonadRandom m, MonadEncrypt (ConfCryptM m key) key) =>
+instance (Monad m, MonadRandom m, MonadEncrypt (ConfCryptM m key) key) =>
     Command AddConfCrypt (ConfCryptM m key) where
     evaluate ac@AddConfCrypt {aName, aValue, aType} =  do
         (ccFile, ctx ) <- ask
@@ -106,7 +106,7 @@ instance (MonadIO m, MonadRandom m, MonadEncrypt (ConfCryptM m key) key) =>
 data EditConfCrypt = EditConfCrypt {eName:: T.Text, eValue :: T.Text, eType :: SchemaType}
     deriving (Eq, Read, Show, Generic)
 
-instance (MonadIO m, MonadRandom m, MonadEncrypt (ConfCryptM m key) key) =>
+instance (Monad m, MonadRandom m, MonadEncrypt (ConfCryptM m key) key) =>
     Command EditConfCrypt (ConfCryptM m key) where
     evaluate ec@EditConfCrypt {eName, eValue, eType} = do
         (ccFile, ctx) <- ask
@@ -135,7 +135,7 @@ instance (MonadIO m, MonadRandom m, MonadEncrypt (ConfCryptM m key) key) =>
 -- lines may simply be deleted based on the parameter name.
 data DeleteConfCrypt = DeleteConfCrypt {dName:: T.Text}
     deriving (Eq, Read, Show, Generic)
-instance MonadIO m => Command DeleteConfCrypt (ConfCryptM m ()) where
+instance Monad m => Command DeleteConfCrypt (ConfCryptM m ()) where
     evaluate DeleteConfCrypt {dName} = do
         (ccFile, ()) <- ask
 
@@ -160,7 +160,7 @@ instance (MonadIO m, MonadDecrypt (ConfCryptM m key) key) => Command ValidateCon
 -- | Dumps the contents of 'defaultLines' to the output buffer. This is the same example config used
 -- in the readme.
 data NewConfCrypt = NewConfCrypt
-instance MonadIO m => Command NewConfCrypt (ConfCryptM m ()) where
+instance Monad m => Command NewConfCrypt (ConfCryptM m ()) where
     evaluate _ =
         writeFullContentsToBuffer False (fileContents defaultLines)
 
@@ -200,7 +200,7 @@ genNewFileState fileContents ((line, action):rest) =
 
 -- | Writes the provided 'ConfCryptFile' (provided as a Map) to the output buffer in line-number order. This
 -- allows for producing an easily diffable output and makes in-place edits easy to spot in source control diffs.
-writeFullContentsToBuffer :: MonadIO m =>
+writeFullContentsToBuffer :: Monad m =>
     Bool
     -> M.Map ConfCryptElement LineNumber
     -> m [T.Text]
