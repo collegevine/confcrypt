@@ -15,7 +15,6 @@ import Control.Monad (join)
 import Control.Monad.Identity (runIdentity)
 import Control.Monad.Reader (runReaderT)
 import Control.Monad.Except (runExcept, runExceptT)
---import Control.Monad.Writer (execWriter, execWriterT)
 import qualified Crypto.PubKey.RSA.Types as RSA
 import Crypto.Random (withDRG, drgNewSeed, seedFromInteger)
 import Data.Monoid ((<>))
