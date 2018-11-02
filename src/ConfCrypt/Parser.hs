@@ -1,12 +1,3 @@
--- |
--- Module:          ConfCrypt.Parser
--- Copyright:       (c) 2018 Chris Coffey
---                  (c) 2018 CollegeVine
--- License:         MIT
--- Maintainer:      Chris Coffey
--- Stability:       experimental
--- Portability:     portable
---
 module ConfCrypt.Parser (
     parseConfCrypt
 ) where
@@ -16,18 +7,16 @@ import ConfCrypt.Types
 import Control.Applicative ((<|>))
 import Control.Applicative.Combinators (manyTill, many, some)
 import Data.Maybe (listToMaybe)
-import Text.Megaparsec (Parsec, parse, getPosition, SourcePos(..), unPos, (<?>), try, failure)
-import Text.Megaparsec.Char (char, space, eol, anyChar, string', digitChar, alphaNumChar,
-    oneOf, symbolChar, separatorChar, letterChar, digitChar, string)
+import Text.Megaparsec (Parsec, parse, getSourcePos, SourcePos(..), unPos, (<?>), try, failure, oneOf, anySingle)
+import Text.Megaparsec.Char (char, space, eol, string', digitChar, alphaNumChar,
+    symbolChar, separatorChar, letterChar, digitChar, string)
 import qualified Data.Text as T
 import qualified Data.Map as M
 import qualified Data.Set as S
 
 type Parser = Parsec ConfCryptError T.Text
 
--- | Parse raw 'Text' into a 'ConfCryptFile'.
---
--- Duplicates are removed by virtue of using a 'Map'. This means the behavior for having duplciate
+-- | Duplicates are removed by virtue of using a 'Map'. This means the behavior for having duplciate
 -- parameter names is officially undefined, but as implemented the last parameter read will be preserved.
 -- DO NOT RELY ON THIS BEHAVIOR!
 parseConfCrypt ::
@@ -68,7 +57,7 @@ parseComment = do
     _ <- space
     _ <- char '#'
     _ <- char ' '
-    line <- T.pack <$> manyTill anyChar eol
+    line <- T.pack <$> manyTill anySingle eol
     _ <- many eol
     pure (CommentLine line, lineNum)
 
@@ -113,7 +102,7 @@ beginsWithName = do
 
 parseLineNum :: Parser LineNumber
 parseLineNum =
-    LineNumber . unPos . sourceLine <$> getPosition
+    LineNumber . unPos . sourceLine <$> getSourcePos
 
 validName :: Parser T.Text
 validName =
@@ -125,6 +114,6 @@ validValue =
     where
         wrapped = do
             _ <- string "BEGIN"
-            value <- manyTill anyChar (string "END")
+            value <- manyTill anySingle (string "END")
             pure $ T.pack value
-        standard = T.pack <$> manyTill anyChar eol
+        standard = T.pack <$> manyTill anySingle eol
