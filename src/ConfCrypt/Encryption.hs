@@ -160,7 +160,7 @@ instance (MonadRandom m, MonadError ConfCryptError m, Monad m) =>
     encryptValue (TextKey key) = encryptValue key
 
 instance (MonadRandom m) => MonadRandom (ConfCryptM m k) where
-    getRandomBytes = lift . lift . lift . lift . getRandomBytes
+    getRandomBytes = lift . lift . lift . getRandomBytes
 
 instance (MonadRandom m) => MonadRandom (ExceptT e m) where
     getRandomBytes = lift . getRandomBytes

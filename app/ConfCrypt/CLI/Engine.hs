@@ -13,10 +13,8 @@ import ConfCrypt.CLI.API
 import Conduit (ResourceT, runResourceT)
 import Control.Exception (catch)
 import Control.DeepSeq (force)
-import Control.Monad.Trans (MonadIO)
 import Control.Monad.Reader (MonadReader, ReaderT, runReaderT, withReaderT)
 import Control.Monad.Except (MonadError, ExceptT, runExceptT)
-import Control.Monad.Writer (MonadWriter, WriterT, execWriterT)
 import Crypto.PubKey.RSA.Types (PublicKey, PrivateKey)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
@@ -93,13 +91,12 @@ run parsedArguments = do
         injectPrivateKey key (conf, _) = (conf, TextKey key)
 
 
-
 runConfCrypt ::
     ConfCryptFile
-    -> ConfCryptM IO () a
+    -> ConfCryptM IO () [T.Text]
     -> IO (Either ConfCryptError [T.Text])
 runConfCrypt file action =
-    runResourceT . runExceptT . execWriterT  $ runReaderT action (file, ())
+    runResourceT . runExceptT $ runReaderT action (file, ())
 
 confFilePath :: AnyCommand -> FilePath
 confFilePath  (RC KeyAndConf {conf}) = conf
