@@ -13,12 +13,9 @@ import ConfCrypt.CLI.API
 import Conduit (ResourceT, runResourceT)
 import Control.Exception (catch)
 import Control.DeepSeq (force)
-import Control.Monad (when)
-import Control.Monad.Trans (MonadIO)
 import Control.Monad.Reader (MonadReader, ReaderT, runReaderT, withReaderT)
 import Control.Monad.Except (MonadError, ExceptT, runExceptT)
 import Crypto.PubKey.RSA.Types (PublicKey, PrivateKey)
-import Data.Either (fromRight, isRight)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import System.Exit (exitSuccess, exitFailure, exitWith, ExitCode(..))
@@ -64,8 +61,6 @@ run parsedArguments = do
                 -- Doesn't care about encryption
                 DC _ cmd ->
                     runConfCrypt parsedConfiguration $ evaluate cmd
-            when (hasToBeSaved parsedArguments && isRight result) $
-              save parsedConfiguration (fromRight [] result)
             either (\e -> print e *> exitFailure) pure result
     where
 
@@ -94,16 +89,6 @@ run parsedArguments = do
         injectPubKey key (conf, _) = (conf, TextKey key)
         injectPrivateKey :: PrivateKey -> (ConfCryptFile, ()) -> (ConfCryptFile, TextKey PrivateKey)
         injectPrivateKey key (conf, _) = (conf, TextKey key)
-
-        hasToBeSaved (AC _ _) = True
-        hasToBeSaved (EC _ _) = True
-        hasToBeSaved (DC _ _) = True
-        hasToBeSaved _ = False
-
-        save ccFile content =
-            let fn = T.unpack $ fileName ccFile
-            in T.writeFile fn $ T.unlines content
-
 
 
 runConfCrypt ::

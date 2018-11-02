@@ -23,62 +23,60 @@ import ConfCrypt.Encryption (decryptValue, MonadDecrypt)
 
 import Control.Monad.Except (runExcept, catchError)
 import Control.Monad.Reader (MonadReader, ask)
-import Control.Monad.Trans (liftIO, MonadIO)
 import Data.Char (isDigit)
-import Data.Foldable (traverse_)
 import Data.Maybe (isNothing)
 import qualified Data.Text as T
 import qualified Data.Map as M
 
 -- | Apply all validation rules, accumulating the errors across rules.
-runAllRules :: (MonadIO m,
+runAllRules :: (Monad m,
     MonadDecrypt m key,
     MonadReader (ConfCryptFile, key) m) =>
     m [T.Text]
 runAllRules = do
     (ccf, privateKey) <- ask
-    parameterTypesMatchSchema privateKey ccf
-    logMissingSchemas ccf
-    logMissingParameters ccf
-    return []
+    a <- parameterTypesMatchSchema privateKey ccf
+    b <- logMissingSchemas ccf
+    c <- logMissingParameters ccf
+    pure $ filter (not . T.null) $ a <> b <> c
 
 -- | For each (Schema, Parameter)  pair, confirm that the parameter's value type matches the schema.
-parameterTypesMatchSchema :: (MonadIO m, MonadDecrypt m key) =>
+parameterTypesMatchSchema :: (Monad m, MonadDecrypt m key) =>
     key
     -> ConfCryptFile
-    -> m ()
+    -> m [T.Text]
 parameterTypesMatchSchema key ConfCryptFile {parameters} =
-    traverse_ decryptAndCompare parameters
+    traverse decryptAndCompare parameters
     where
         decryptAndCompare Parameter {paramName, paramValue, paramType} =
             catchError (runRule paramType paramName =<< decryptValue key paramValue)
-                       (pure $ liftIO $ putStrLn ("Error: Could not decrypt " <> T.unpack paramName))
+                       (pure $ pure ("Error: Could not decrypt " <> paramName))
         runRule paramType paramName val =
             case paramType of
-                Nothing -> pure ()
-                Just CInt | all isDigit $ T.unpack val -> pure ()
-                Just CBoolean | T.toLower val == "true" || T.toLower val == "false" -> pure ()
-                Just CString | not (T.null val) -> pure ()
-                Just CString | T.null val -> liftIO $ putStrLn ("Warning: "<> T.unpack paramName <> " is empty")
-                Just pt -> liftIO $ putStrLn ("Error: "<> T.unpack paramName <> " does not match the schema type " <> T.unpack (typeToOutputString pt))
+                Nothing -> pure ""
+                Just CInt | all isDigit $ T.unpack val -> pure ""
+                Just CBoolean | T.toLower val == "true" || T.toLower val == "false" -> pure ""
+                Just CString | not (T.null val) -> pure ""
+                Just CString | T.null val -> pure $ "Warning: "<> paramName <> " is empty"
+                Just pt -> pure $ "Error: "<> paramName <> " does not match the schema type " <> typeToOutputString pt
 
 -- | Raise an error if there are parameters without a schema
-logMissingSchemas :: MonadIO m =>
+logMissingSchemas :: Monad m =>
     ConfCryptFile
-    -> m ()
+    -> m [T.Text]
 logMissingSchemas ConfCryptFile {parameters} =
-    traverse_ logMissingSchema parameters
+    traverse logMissingSchema parameters
     where
         logMissingSchema Parameter {paramName, paramType}
-            | isNothing paramType = liftIO $ putStrLn ("Error: " <> T.unpack paramName <> " does not have a schema")
-            | otherwise = pure ()
+            | isNothing paramType = pure $ "Error: " <> paramName <> " does not have a schema"
+            | otherwise = pure ""
 
 -- | Raise an error if there are schema without a parameter
-logMissingParameters :: MonadIO m =>
+logMissingParameters :: Monad m =>
     ConfCryptFile
-    -> m ()
+    -> m [T.Text]
 logMissingParameters ConfCryptFile {fileContents} =
-    traverse_ logMissingParameter . M.toList $ M.filterWithKey (\k _ -> isSchema k) fileContents
+    traverse logMissingParameter . M.toList $ M.filterWithKey (\k _ -> isSchema k) fileContents
     where
         isSchema (SchemaLine _) = True
         isSchema _ = False
@@ -86,7 +84,7 @@ logMissingParameters ConfCryptFile {fileContents} =
         paramForName name _ = False
 
         logMissingParameter (SchemaLine Schema {sName}, _)
-            | M.null $ M.filterWithKey (\k _ -> paramForName sName k) fileContents  = liftIO $ putStrLn ("Error: no matching parameter for schema "<> T.unpack sName)
-            | otherwise = pure ()
-        logMissingParameter _ =  pure ()
+            | M.null $ M.filterWithKey (\k _ -> paramForName sName k) fileContents  = pure $ "Error: no matching parameter for schema "<> sName
+            | otherwise = pure ""
+        logMissingParameter _ =  pure ""
 

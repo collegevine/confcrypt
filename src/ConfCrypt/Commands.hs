@@ -27,19 +27,14 @@ import ConfCrypt.Providers.AWS (AWSCtx)
 
 import Control.Arrow (second)
 import Control.Monad (unless, (<=<))
-import Control.Monad.Trans (lift, liftIO, MonadIO)
 import Control.Monad.Reader (ask)
 import Control.Monad.Except (throwError, runExcept, MonadError, Except)
-import Control.Monad.Writer (tell, MonadWriter)
 import Crypto.Random (MonadRandom)
-import Data.Foldable (foldrM, traverse_)
 import Data.List (find, sortOn)
 import Data.Maybe (maybeToList)
 import GHC.Generics (Generic)
 import qualified Crypto.PubKey.RSA.Types as RSA
 import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
-import qualified Data.Text.IO as T
 import qualified Data.Map as M
 
 -- | Commands may perform one of the following operations to a line of a confcrypt file
@@ -83,7 +78,7 @@ instance (Monad m, MonadDecrypt (ConfCryptM m key) key) => Command GetConfCrypt 
         let mParam = find ((==name) . paramName) (parameters ccFile)
         traverse (decrypt ctx) $ maybeToList mParam
         where
-            decrypt ctx = pure <=< decryptValue ctx . paramValue
+            decrypt ctx = decryptValue ctx . paramValue
 
 -- | Used to add a new config parameter to the file
 data AddConfCrypt = AddConfCrypt {aName :: T.Text, aValue :: T.Text, aType :: SchemaType}
@@ -154,7 +149,7 @@ instance Monad m => Command DeleteConfCrypt (ConfCryptM m ()) where
 
 -- | Run all of the rules in 'ConfCrypt.Validation' on this file.
 data ValidateConfCrypt = ValidateConfCrypt
-instance (MonadIO m, MonadDecrypt (ConfCryptM m key) key) => Command ValidateConfCrypt (ConfCryptM m key) where
+instance (Monad m, MonadDecrypt (ConfCryptM m key) key) => Command ValidateConfCrypt (ConfCryptM m key) where
     evaluate _ = runAllRules
 
 -- | Dumps the contents of 'defaultLines' to the output buffer. This is the same example config used
