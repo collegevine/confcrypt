@@ -50,7 +50,7 @@ parameterTypesMatchSchema key ConfCryptFile {parameters} =
     where
         decryptAndCompare Parameter {paramName, paramValue, paramType} =
             catchError (runRule paramType paramName =<< decryptValue key paramValue)
-                       (pure $ pure ("Error: Could not decrypt " <> paramName))
+                       (const $ pure ("Error: Could not decrypt " <> paramName))
         runRule paramType paramName val =
             case paramType of
                 Nothing -> pure ""
