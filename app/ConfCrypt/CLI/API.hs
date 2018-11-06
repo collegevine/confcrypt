@@ -9,7 +9,8 @@ module ConfCrypt.CLI.API (
 import ConfCrypt.Types (SchemaType(..))
 import ConfCrypt.Commands (GetConfCrypt(..), AddConfCrypt(..), EditConfCrypt(..), DeleteConfCrypt(..))
 
-import Options.Applicative
+import Options.Applicative (ParserInfo, Parser, progDesc, command, fullDesc, long, flag, metavar,
+    help, strOption, short, info, header, footer, strArgument, hsubparser, helper, (<**>))
 import qualified Data.Text as T
 
 data KeyAndConf = KeyAndConf {key :: FilePath, provider :: KeyProvider, conf :: FilePath}

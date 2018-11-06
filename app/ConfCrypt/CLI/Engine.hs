@@ -2,13 +2,14 @@ module ConfCrypt.CLI.Engine (
     run
     ) where
 
-import ConfCrypt.Types
-import ConfCrypt.Commands
-import ConfCrypt.Parser
+import ConfCrypt.Types (ConfCryptError(..), ConfCryptFile(..), ConfCryptM)
+import ConfCrypt.Commands (NewConfCrypt(..), ReadConfCrypt(..), ValidateConfCrypt(..),
+    AddConfCrypt(..), DeleteConfCrypt(..), evaluate)
+import ConfCrypt.Parser (parseConfCrypt)
 import ConfCrypt.Encryption
 import ConfCrypt.Default (emptyConfCryptFile)
-import ConfCrypt.Providers.AWS
-import ConfCrypt.CLI.API
+import ConfCrypt.Providers.AWS (AWSCtx, loadAwsCtx, KMSKeyId(..))
+import ConfCrypt.CLI.API (AnyCommand(..), Conf(..), KeyAndConf(..), KeyProvider(..))
 
 import Conduit (ResourceT, runResourceT)
 import Control.Exception (catch)
