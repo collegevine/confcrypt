@@ -1,6 +1,6 @@
 name:                confcrypt
 version:             0.1.0.4
-github:              "https://github.com/collegevine/confcrypt"
+github:              collegevine/confcrypt
 license:             MIT
 author:              "Chris Coffey"
 maintainer:          "chris@collegevine.com"
