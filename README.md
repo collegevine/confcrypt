@@ -30,23 +30,23 @@ As soon as an application is deployed or built on more than a single machine, yo
     # TIMEOUT_MS = 300
     ```
 - read a config
-    `confcrypt read --key <filename> <filename>`
+    `confcrypt rsa read --key <filename> <filename>`
     This command reads in the provided file, decrypts the configuration variables using the provided key, then prints them to stdout. This allows you to pipe the results to other utilities. Returns 0 on success.
 - add a parameter
-    `confcrypt add --key <filename> --name <String> --type <SchemaType> --vaue <String> <filename>
+    `confcrypt rsa add --key <filename> --name <String> --type <SchemaType> --vaue <String> <filename>
     Adds a new confguration parameter to the file. `--name` and `--value` are required, while `--type` is optional. If `--type` is provided, the schema record will be added immediately before the config variable. In total this adds two lines to the file. Returns 0 on sccess.
 - remove a parameter
     `confcrypt delete --name <filename>
     Removes an existing config parameter & associated schema. Returns 0 on success or 1 if the parameter is not found in the file.
 - edit a parameter in-place
-    `confcrypt edit --key <filename> --name <String> --value <String> --type <SchemaType> <filename>`
+    `confcrypt rsa edit --key <filename> --name <String> --value <String> --type <SchemaType> <filename>`
     Modifies an existing configuration parameter in place, leaving all other lines unchanged. While this isn't how it's actually implemented, this operation is equivalent to piping `confcrypt read` to a new file, editing the parameter, then reencrypting it.
 - validate a config
-    `confcrypt validate --key <filename> <filename>`
+    `confcrypt rsa validate --key <filename> <filename>`
     Checks that each config parameter matches the type of its schema. All errors are accumulated and returned at the end, with a response code equal to the number of failures.
 
 - Using Amazon KMS instead of a local key
-    The `--use-aws` flag changes the behavior of the `--key` parameter to represent a KMS key id rather than an on-disk rsa key file.
+    The `rsa` command tree exists under `aws`, which changes the behavior of the `--key` parameter to represent a KMS key id rather than an on-disk rsa key file. The otherwise the semantics of the commands are identical between `rsa` and `kms` branches.
 
 ## The confcrypt file format
     ```

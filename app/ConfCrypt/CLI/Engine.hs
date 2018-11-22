@@ -9,7 +9,7 @@ import ConfCrypt.Parser (parseConfCrypt)
 import ConfCrypt.Encryption
 import ConfCrypt.Default (emptyConfCryptFile)
 import ConfCrypt.Providers.AWS (AWSCtx, loadAwsCtx, KMSKeyId(..))
-import ConfCrypt.CLI.API (AnyCommand(..), Conf(..), KeyAndConf(..), KeyProvider(..))
+import ConfCrypt.CLI.API (AnyCommand(..), Conf(..), KeyAndConf(..), KeyProvider(..), ParsedKey(..))
 
 import Conduit (ResourceT, runResourceT)
 import Control.Exception (catch)
@@ -67,19 +67,25 @@ run parsedArguments = do
 
         -- Inject an encryption context into the currently loaded environment. This varies dependng
         -- on whether its a local RSA key or a KMS key
-        runWithEncrypt k AWS cmd = do
-            ctx <- loadAwsCtx (KMSKeyId $ T.pack k)
+        runWithEncrypt (KmsId k) AWS cmd = do
+            ctx <- loadAwsCtx (KMSKeyId k)
             withReaderT (injectAWSCtx ctx) $ evaluate cmd
-        runWithEncrypt k LocalRSA cmd = do
+        runWithEncrypt UnNecessary AWS cmd = do
+            ctx <- loadAwsCtx (KMSKeyId "dummy")
+            withReaderT (injectAWSCtx ctx) $ evaluate cmd
+        runWithEncrypt (OnDisk k) LocalRSA cmd = do
             rsaKey <- loadRSAKey k
             withReaderT (injectPubKey rsaKey) $ evaluate cmd
 
         -- Inject a decryption context into the currently loaded environment. This varies dependng
         -- on whether its a local RSA key or a KMS key
-        runWithDecrypt k AWS cmd = do
-            ctx <- loadAwsCtx (KMSKeyId $ T.pack k)
+        runWithDecrypt (KmsId k) AWS cmd = do
+            ctx <- loadAwsCtx (KMSKeyId k)
             withReaderT (injectAWSCtx ctx) $ evaluate cmd
-        runWithDecrypt k LocalRSA cmd = do
+        runWithDecrypt UnNecessary AWS cmd = do
+            ctx <- loadAwsCtx (KMSKeyId "dummy")
+            withReaderT (injectAWSCtx ctx) $ evaluate cmd
+        runWithDecrypt (OnDisk k) LocalRSA cmd = do
             rsaKey <- loadRSAKey k
             withReaderT (injectPrivateKey rsaKey) $ evaluate cmd
 
