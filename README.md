@@ -36,7 +36,7 @@ As soon as an application is deployed or built on more than a single machine, yo
     `confcrypt rsa add --key <filename> --name <String> --type <SchemaType> --vaue <String> <filename>
     Adds a new confguration parameter to the file. `--name` and `--value` are required, while `--type` is optional. If `--type` is provided, the schema record will be added immediately before the config variable. In total this adds two lines to the file. Returns 0 on sccess.
 - remove a parameter
-    `confcrypt delete --name <filename>
+    `confcrypt delete --name <filename>`
     Removes an existing config parameter & associated schema. Returns 0 on success or 1 if the parameter is not found in the file.
 - edit a parameter in-place
     `confcrypt rsa edit --key <filename> --name <String> --value <String> --type <SchemaType> <filename>`
