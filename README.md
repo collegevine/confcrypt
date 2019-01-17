@@ -6,6 +6,8 @@ As soon as an application is deployed or built on more than a single machine, yo
 ## Installing confcrypt
 #### Mac OSX
 
+1. If you don't have Haskell installed and working already, you'll need it.  Install `stack` from [haskellstack.org](https://haskellstack.org/), or if you have [Homebrew](https://brew.sh/) installed, with the command `brew install haskell-stack`.  (**note**: The homebrew install mechanism, at least, doesn't include the directory where stack installs stuff to your PATH, so you'll need to do this manually.)
+2. At the root of this repo, run `stack install`.  (Takes 10-15 minutes.)
 
 ## Using confcrypt
 - create a config
