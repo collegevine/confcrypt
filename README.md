@@ -4,9 +4,14 @@ As soon as an application is deployed or built on more than a single machine, yo
 [![CircleCI](https://circleci.com/gh/collegevine/confcrypt/tree/master.svg?style=svg)](https://circleci.com/gh/collegevine/confcrypt/tree/master)
 
 ## Installing confcrypt
-#### Mac OSX
+#### Mac OSX via Brew
+```
+brew tap collegevine/brew
+brew cask install confcrypt
+```
+#### Windows, Linux, & OSX native 
 
-1. If you don't have Haskell installed and working already, you'll need it.  Install `stack` from [haskellstack.org](https://haskellstack.org/), or if you have [Homebrew](https://brew.sh/) installed, with the command `brew install haskell-stack`.  (**note**: The homebrew install mechanism, at least, doesn't include the directory where stack installs stuff to your PATH, so you'll need to do this manually.)
+1. If you don't have Haskell installed and working already, you'll need it.  Install `stack` from [haskellstack.org](https://haskellstack.org/).
 2. At the root of this repo, run `stack install`.  (Takes 10-15 minutes.)
 
 ## Using confcrypt
