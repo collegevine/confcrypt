@@ -290,3 +290,4 @@ validateCases = testGroup "validate" [
             Failure _ -> assertFailure "Should have parsed an VC"
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
     ]
+

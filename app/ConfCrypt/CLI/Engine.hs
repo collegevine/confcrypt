@@ -35,6 +35,7 @@ run NC = do
     either (\e -> print e *> exitFailure)
            pure
            res
+run (VER version) = pure [version]
 run parsedArguments = do
     let filePath = confFilePath parsedArguments
     lines <- T.readFile filePath

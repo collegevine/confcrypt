@@ -13,6 +13,8 @@ import ConfCrypt.Commands (GetConfCrypt(..), AddConfCrypt(..), EditConfCrypt(..)
 import Options.Applicative (ParserInfo, Parser, progDesc, command, fullDesc, long, flag, metavar,
     help, strOption, short, info, header, footer, strArgument, hsubparser, helper, (<**>))
 import qualified Data.Text as T
+import Paths_confcrypt (version)
+import Data.Version (showVersion)
 
 data KeyAndConf = KeyAndConf {key :: ParsedKey, provider :: KeyProvider, conf :: FilePath}
     deriving (Eq, Show)
@@ -26,6 +28,7 @@ data AnyCommand
     | EC KeyAndConf EditConfCrypt
     | DC Conf DeleteConfCrypt
     | VC KeyAndConf
+    | VER T.Text
     | NC
     deriving (Eq, Show)
 
@@ -57,6 +60,8 @@ commandParser = hsubparser
         command "new" new
         <>
         command "delete" delete
+        <>
+        command "version" vers
     )
 
 awsCmds :: ParserInfo AnyCommand
@@ -93,6 +98,10 @@ rsaCmds = info (
     fullDesc <>
     (header "Run using a local RSA key. This overloads the --key option to accept a file path to the public key.")
 
+
+vers :: ParserInfo AnyCommand
+vers = info (pure . VER . T.pack $ showVersion version)
+               (progDesc "The current version of confcrypt" <> fullDesc)
 
 add ::
     KeyProvider

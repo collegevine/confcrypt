@@ -1,5 +1,5 @@
 name:                confcrypt
-version:             0.2.0.0
+version:             0.2.2.0
 github:              collegevine/confcrypt
 license:             MIT
 author:              "Chris Coffey"
@@ -39,6 +39,9 @@ dependencies:
 - lens >= 4.16
 - conduit >= 1.3 && < 1.4
 
+# This tells clang not to print an ugly warning because we use a macro-generated module
+ghc-options: ["-optP-Wno-nonportable-include-path"]
+
 library:
   source-dirs: src
   exposed-modules:
@@ -62,6 +65,7 @@ executables:
     other-modules:
         - ConfCrypt.CLI.API
         - ConfCrypt.CLI.Engine
+        - Paths_confcrypt
     ghc-options:
     - -threaded
     - -rtsopts
@@ -83,7 +87,8 @@ tests:
         ConfCrypt.Commands.Tests,
         ConfCrypt.Encryption.Tests,
         ConfCrypt.CLI.API.Tests,
-        ConfCrypt.Common
+        ConfCrypt.Common,
+        ConfCrypt.CLI.API
     ghc-options:
     - -threaded
     - -rtsopts
