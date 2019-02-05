@@ -5,6 +5,7 @@ module ConfCrypt.Commands (
 
     -- * Supported Commands
     ReadConfCrypt(..),
+    GetConfCrypt(..),
     AddConfCrypt(..),
     EditConfCrypt(..),
     DeleteConfCrypt(..),
@@ -25,18 +26,15 @@ import ConfCrypt.Validation (runAllRules)
 import ConfCrypt.Providers.AWS (AWSCtx)
 
 import Control.Arrow (second)
-import Control.Monad (unless)
-import Control.Monad.Trans (lift)
+import Control.Monad (unless, (<=<))
 import Control.Monad.Reader (ask)
 import Control.Monad.Except (throwError, runExcept, MonadError, Except)
-import Control.Monad.Writer (tell, MonadWriter)
 import Crypto.Random (MonadRandom)
-import Data.Foldable (foldrM, traverse_)
-import Data.List (sortOn)
+import Data.List (find, sortOn)
+import Data.Maybe (maybeToList)
 import GHC.Generics (Generic)
 import qualified Crypto.PubKey.RSA.Types as RSA
 import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
 import qualified Data.Map as M
 
 -- | Commands may perform one of the following operations to a line of a confcrypt file
@@ -51,7 +49,7 @@ data FileAction
 --
 -- In reality the return type of 'evalutate' is 'Text', this needs to be cleaned up in the upcoming version.
 class Monad m => Command a m where
-    evaluate :: a -> m ()
+    evaluate :: a -> m [T.Text]
 
 -- | Read and return the full contents of an encrypted file. Provides support for using a local RSA key or an externl KMS service
 data ReadConfCrypt = ReadConfCrypt
@@ -70,6 +68,17 @@ instance (Monad m, MonadDecrypt (ConfCryptM m key) key) => Command ReadConfCrypt
                 where
                 transformedLines = [(p, Edit)| p <- transformed]
 
+-- | Used to get the decrypted value of a single encrypted config parameter
+data GetConfCrypt = GetConfCrypt {gName :: T.Text}
+    deriving (Eq, Read, Show, Generic)
+
+instance (Monad m, MonadDecrypt (ConfCryptM m key) key) => Command GetConfCrypt (ConfCryptM m key) where
+    evaluate (GetConfCrypt name) = do
+        (ccFile, ctx) <- ask
+        let mParam = find ((==name) . paramName) (parameters ccFile)
+        traverse (decrypt ctx) $ maybeToList mParam
+        where
+            decrypt ctx = decryptValue ctx . paramValue
 
 -- | Used to add a new config parameter to the file
 data AddConfCrypt = AddConfCrypt {aName :: T.Text, aValue :: T.Text, aType :: SchemaType}
@@ -121,7 +130,7 @@ instance (Monad m, MonadRandom m, MonadEncrypt (ConfCryptM m key) key) =>
 -- lines may simply be deleted based on the parameter name.
 data DeleteConfCrypt = DeleteConfCrypt {dName:: T.Text}
     deriving (Eq, Read, Show, Generic)
-instance (Monad m) => Command DeleteConfCrypt (ConfCryptM m ()) where
+instance Monad m => Command DeleteConfCrypt (ConfCryptM m ()) where
     evaluate DeleteConfCrypt {dName} = do
         (ccFile, ()) <- ask
 
@@ -186,15 +195,14 @@ genNewFileState fileContents ((line, action):rest) =
 
 -- | Writes the provided 'ConfCryptFile' (provided as a Map) to the output buffer in line-number order. This
 -- allows for producing an easily diffable output and makes in-place edits easy to spot in source control diffs.
-writeFullContentsToBuffer :: (Monad m, MonadWriter [T.Text] m) =>
+writeFullContentsToBuffer :: Monad m =>
     Bool
     -> M.Map ConfCryptElement LineNumber
-    -> m ()
+    -> m [T.Text]
 writeFullContentsToBuffer wrap contents =
-    traverse_ (tell . singleton . toDisplayLine wrap) sortedLines
+    return $ toDisplayLine wrap <$> sortedLines
     where
         sortedLines = fmap fst . sortOn snd $ M.toList contents
-        singleton x = [x]
 
         toDisplayLine ::
             Bool
@@ -203,7 +211,6 @@ writeFullContentsToBuffer wrap contents =
         toDisplayLine _ (CommentLine comment) = "# " <> comment
         toDisplayLine _ (SchemaLine (Schema name tpe)) = name <> " : " <> typeToOutputString tpe
         toDisplayLine wrap (ParameterLine (ParamLine name val)) = name <> " = " <> if wrap then wrapEncryptedValue val else val
-
 
 -- TODO remove this
 -- | Because the encrypted results are stored as UTF8 text, its possible for an encrypted value

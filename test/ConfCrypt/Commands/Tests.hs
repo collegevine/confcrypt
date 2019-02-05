@@ -11,10 +11,10 @@ import ConfCrypt.Encryption (unpackPrivateRSAKey, project, TextKey(..))
 import ConfCrypt.Common
 
 import Conduit (runResourceT)
+import Control.Monad (join)
 import Control.Monad.Identity (runIdentity)
 import Control.Monad.Reader (runReaderT)
 import Control.Monad.Except (runExcept, runExceptT)
-import Control.Monad.Writer (execWriter, execWriterT)
 import qualified Crypto.PubKey.RSA.Types as RSA
 import Crypto.Random (withDRG, drgNewSeed, seedFromInteger)
 import Data.Monoid ((<>))
@@ -24,6 +24,7 @@ import Test.Tasty.QuickCheck
 import Test.QuickCheck (NonEmptyList(..))
 import Test.Tasty.HUnit
 import qualified Data.Text as T
+import qualified Data.Text.IO as T
 import qualified Data.Map as M
 
 commandTests :: TestTree
@@ -63,7 +64,7 @@ bufferWriteProperties :: TestTree
 bufferWriteProperties  = testGroup "Buffer write" [
     testProperty "parse (writerBuffer xs) == xs" $ \(ValidCCF ccf)-> let
         fc = fileContents ccf
-        output = (<> "\n") . T.intercalate "\n" . execWriter $ writeFullContentsToBuffer True fc
+        output = (<> "\n") . T.intercalate "\n" $ join (writeFullContentsToBuffer True fc)
         parseRes = parseConfCrypt "" output
         in either (const False)
                   (\ccf' -> fileContents ccf' == fc)
@@ -99,7 +100,7 @@ readTests = testGroup "Read" [
             probablyKP <- runExceptT $ unpackPrivateRSAKey dangerousTestKey
             privateKey <- either (assertFailure . show) (pure . project ) probablyKP :: IO RSA.PrivateKey
             ccf <- either (assertFailure . show) pure testLines
-            runResourceT . runExceptT . execWriterT $ runReaderT (evaluate ReadConfCrypt) (ccf, TextKey privateKey) :: IO (Either ConfCryptError [T.Text])
+            runResourceT . runExceptT $ runReaderT (evaluate ReadConfCrypt) (ccf, TextKey privateKey) :: IO (Either ConfCryptError [T.Text])
 
 
 addTests :: TestTree
@@ -123,7 +124,7 @@ addTests = testGroup "Add" [
                                 (M.fromList [(SchemaLine Schema {sName= "Test", sType = CString},LineNumber 1),
                                              (ParameterLine ParamLine {pName ="Test", pValue="Foo"},LineNumber 2)])
                                 [Parameter "Test" "Foo" ( Just CString )]
-        res <- runResourceT . runExceptT . execWriterT $ runReaderT (evaluate dummyAdd) (ccf, TextKey publicKey) :: IO (Either ConfCryptError [T.Text])
+        res <- runResourceT . runExceptT $ runReaderT (evaluate dummyAdd) (ccf, TextKey publicKey) :: IO (Either ConfCryptError [T.Text])
         case res of
             Left (WrongFileAction _) -> assertBool "hmm" True
             _ -> assertFailure "Expected a WrongFileAction error"

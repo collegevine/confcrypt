@@ -3,7 +3,7 @@ module ConfCrypt.CLI.API.Tests (
     ) where
 
 import ConfCrypt.CLI.API
-import ConfCrypt.Commands (AddConfCrypt(..), EditConfCrypt(..), DeleteConfCrypt(..))
+import ConfCrypt.Commands (GetConfCrypt(..), AddConfCrypt(..), EditConfCrypt(..), DeleteConfCrypt(..))
 import ConfCrypt.Types
 
 import ConfCrypt.Common
@@ -13,7 +13,7 @@ import Test.Tasty
 import Test.Tasty.HUnit
 
 localTestConf :: KeyAndConf
-localTestConf = KeyAndConf "testKey" LocalRSA "test.econf"
+localTestConf = KeyAndConf (OnDisk "testKey") LocalRSA "test.econf"
 
 cliAPITests :: TestTree
 cliAPITests = testGroup "cli api" [
@@ -23,6 +23,7 @@ cliAPITests = testGroup "cli api" [
 apiTests :: TestTree
 apiTests = testGroup "specific cases" [
     readCases,
+    getCases,
     addCases,
     editCases,
     deleteCases,
@@ -32,41 +33,75 @@ apiTests = testGroup "specific cases" [
 readCases :: TestTree
 readCases = testGroup "read" [
     testCase "read requires a key" $ do
-        let args = ["read", "test.econf"]
+        let args = ["rsa", "read", "test.econf"]
             res = execParserPure defaultPrefs cliParser args
         case res of
             Failure _ -> assertBool "can't fail" True
             Success a -> assertFailure ("Incorrectly parsed: "<> show a)
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
     ,testCase "read requires a config file" $ do
-        let args = ["read", "--key", "testKey"]
+        let args = ["rsa", "read", "--key", "testKey"]
             res = execParserPure defaultPrefs cliParser args
         case res of
             Failure _ -> assertBool "can't fail" True
             Success a -> assertFailure ("Incorrectly parsed: "<> show a)
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
    ,testCase "read preserves the provided key file with -k" $ do
-        let args = ["read", "-k", "testKey", "test.econf"]
+        let args = ["rsa", "read", "-k", "testKey", "test.econf"]
             res = execParserPure defaultPrefs cliParser args
         case res of
-            Success (RC (KeyAndConf "testKey" LocalRSA "test.econf") ) -> assertBool "can't fail" True
+            Success (RC (KeyAndConf (OnDisk "testKey") LocalRSA "test.econf") ) -> assertBool "can't fail" True
             Success a -> assertFailure ("Incorrectly parsed: "<> show a)
             Failure _ -> assertFailure "Should have parsed an RC"
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
    ,testCase "read preserves the provided key file with --key" $ do
-        let args = ["read", "--key", "testKey","test.econf"]
+        let args = ["rsa", "read", "--key", "testKey","test.econf"]
             res = execParserPure defaultPrefs cliParser args
         case res of
-            Success (RC (KeyAndConf "testKey" LocalRSA "test.econf") ) -> assertBool "can't fail" True
+            Success (RC (KeyAndConf (OnDisk "testKey") LocalRSA "test.econf") ) -> assertBool "can't fail" True
             Success a -> assertFailure ("Incorrectly parsed: "<> show a)
             Failure _ -> assertFailure "Should have parsed an RC"
+            CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
+    ]
+
+getCases :: TestTree
+getCases = testGroup "get" [
+    testCase "get requires a key" $ do
+        let args = ["rsa", "get", "--name", "Test", "test.econf"]
+            res = execParserPure defaultPrefs cliParser args
+        case res of
+            Failure _ -> assertBool "can't fail" True
+            Success a -> assertFailure ("Incorrectly parsed: "<> show a)
+            CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
+    ,testCase "get requires a config file" $ do
+        let args = ["rsa", "get", "--key", "testKey", "--name", "Test"]
+            res = execParserPure defaultPrefs cliParser args
+        case res of
+            Failure _ -> assertBool "can't fail" True
+            Success a -> assertFailure ("Incorrectly parsed: "<> show a)
+            CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
+   ,testCase "get preserves the provided key file with -k" $ do
+        let args = ["rsa", "get", "-k", "testKey", "--name", "Test", "test.econf"]
+            res = execParserPure defaultPrefs cliParser args
+        case res of
+            Success (GC (KeyAndConf (OnDisk "testKey") LocalRSA "test.econf") (GetConfCrypt "Test")) -> assertBool "can't fail" True
+            Success a -> assertFailure ("Incorrectly parsed: "<> show a)
+            Failure _ -> assertFailure "Should have parsed a GC"
+            CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
+   ,testCase "get preserves the provided key file with --key" $ do
+        let args = ["rsa", "get", "--key", "testKey", "--name", "Test", "test.econf"]
+            res = execParserPure defaultPrefs cliParser args
+        case res of
+            Success (GC (KeyAndConf (OnDisk "testKey") LocalRSA "test.econf") (GetConfCrypt "Test")) -> assertBool "can't fail" True
+            Success a -> assertFailure ("Incorrectly parsed: "<> show a)
+            Failure _ -> assertFailure "Should have parsed a GC"
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
     ]
 
 addCases :: TestTree
 addCases = testGroup "add" [
     testCase "requires a key" $ do
-        let args = ["add", "--name", "test", "--type", "String", "--value", "foo", "test.econf"]
+        let args = ["rsa", "add", "--name", "test", "--type", "String", "--value", "foo", "test.econf"]
             res = execParserPure defaultPrefs cliParser args
         case res of
             Failure _ -> assertBool "can't fail" True
@@ -74,7 +109,7 @@ addCases = testGroup "add" [
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
 
    ,testCase "requires a name" $ do
-        let args = ["add", "--key", "testKey", "--type", "String", "--value", "foo", "test.econf"]
+        let args = ["rsa", "add", "--key", "testKey", "--type", "String", "--value", "foo", "test.econf"]
             res = execParserPure defaultPrefs cliParser args
         case res of
             Failure _ -> assertBool "can't fail" True
@@ -82,7 +117,7 @@ addCases = testGroup "add" [
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
 
    ,testCase "requires a type" $ do
-        let args = ["add", "--key", "testKey", "--name", "test", "--value", "foo", "test.econf"]
+        let args = ["rsa", "add", "--key", "testKey", "--name", "test", "--value", "foo", "test.econf"]
             res = execParserPure defaultPrefs cliParser args
         case res of
             Failure _ -> assertBool "can't fail" True
@@ -90,7 +125,7 @@ addCases = testGroup "add" [
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
 
    ,testCase "requires a value" $ do
-        let args = ["add", "--key", "testKey", "--name", "test", "--type", "String", "test.econf"]
+        let args = ["rsa", "add", "--key", "testKey", "--name", "test", "--type", "String", "test.econf"]
             res = execParserPure defaultPrefs cliParser args
         case res of
             Failure _ -> assertBool "can't fail" True
@@ -98,7 +133,7 @@ addCases = testGroup "add" [
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
 
    ,testCase "requires a config file" $ do
-        let args = ["add", "--key", "testKey", "--name", "test", "--type", "String", "--value", "foo"]
+        let args = ["rsa", "add", "--key", "testKey", "--name", "test", "--type", "String", "--value", "foo"]
             res = execParserPure defaultPrefs cliParser args
         case res of
             Failure _ -> assertBool "can't fail" True
@@ -106,19 +141,19 @@ addCases = testGroup "add" [
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
 
    ,testCase "preserves the provided arguments " $ do
-        let args =  ["add", "--key", "testKey", "--name", "test", "--type", "String", "--value", "foo", "test.econf"]
+        let args =  ["rsa", "add", "--key", "testKey", "--name", "test", "--type", "String", "--value", "foo", "test.econf"]
             res = execParserPure defaultPrefs cliParser args
         case res of
-            Success (AC (KeyAndConf "testKey" LocalRSA "test.econf") (AddConfCrypt "test" "foo" CString)) -> assertBool "can't fail" True
+            Success (AC (KeyAndConf (OnDisk "testKey") LocalRSA "test.econf") (AddConfCrypt "test" "foo" CString)) -> assertBool "can't fail" True
             Success a -> assertFailure ("Incorrectly parsed: "<> show a)
             Failure _ -> assertFailure "Should have parsed an AC"
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
 
    ,testCase "supports alternative argument labels" $ do
-        let args =  ["add", "-k", "testKey", "-n", "test", "-t", "String", "-v", "foo", "test.econf"]
+        let args =  ["rsa", "add", "-k", "testKey", "-n", "test", "-t", "String", "-v", "foo", "test.econf"]
             res = execParserPure defaultPrefs cliParser args
         case res of
-            Success (AC (KeyAndConf "testKey" LocalRSA "test.econf") (AddConfCrypt "test" "foo" CString)) -> assertBool "can't fail" True
+            Success (AC (KeyAndConf (OnDisk "testKey") LocalRSA "test.econf") (AddConfCrypt "test" "foo" CString)) -> assertBool "can't fail" True
             Success a -> assertFailure ("Incorrectly parsed: "<> show a)
             Failure _ -> assertFailure "Should have parsed an AC"
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
@@ -127,7 +162,7 @@ addCases = testGroup "add" [
 editCases :: TestTree
 editCases = testGroup "edit" [
     testCase "requires a key" $ do
-        let args = ["edit", "--name", "test", "--type", "String", "--value", "foo", "test.econf"]
+        let args = ["rsa", "edit", "--name", "test", "--type", "String", "--value", "foo", "test.econf"]
             res = execParserPure defaultPrefs cliParser args
         case res of
             Failure _ -> assertBool "can't fail" True
@@ -135,7 +170,7 @@ editCases = testGroup "edit" [
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
 
    ,testCase "requires a name" $ do
-        let args = ["edit", "--key", "testKey", "--type", "String", "--value", "foo", "test.econf"]
+        let args = ["rsa", "edit", "--key", "testKey", "--type", "String", "--value", "foo", "test.econf"]
             res = execParserPure defaultPrefs cliParser args
         case res of
             Failure _ -> assertBool "can't fail" True
@@ -143,7 +178,7 @@ editCases = testGroup "edit" [
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
 
    ,testCase "requires a type" $ do
-        let args = ["edit", "--key", "testKey", "--name", "test", "--value", "foo", "test.econf"]
+        let args = ["rsa", "edit", "--key", "testKey", "--name", "test", "--value", "foo", "test.econf"]
             res = execParserPure defaultPrefs cliParser args
         case res of
             Failure _ -> assertBool "can't fail" True
@@ -151,7 +186,7 @@ editCases = testGroup "edit" [
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
 
    ,testCase "requires a value" $ do
-        let args = ["edit", "--key", "testKey", "--name", "test", "--type", "String", "test.econf"]
+        let args = ["rsa", "edit", "--key", "testKey", "--name", "test", "--type", "String", "test.econf"]
             res = execParserPure defaultPrefs cliParser args
         case res of
             Failure _ -> assertBool "can't fail" True
@@ -159,7 +194,7 @@ editCases = testGroup "edit" [
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
 
    ,testCase "requires a config file" $ do
-        let args = ["edit", "--key", "testKey", "--name", "test", "--type", "String", "--value", "foo"]
+        let args = ["rsa", "edit", "--key", "testKey", "--name", "test", "--type", "String", "--value", "foo"]
             res = execParserPure defaultPrefs cliParser args
         case res of
             Failure _ -> assertBool "can't fail" True
@@ -167,19 +202,19 @@ editCases = testGroup "edit" [
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
 
    ,testCase "preserves the provided arguments " $ do
-        let args =  ["edit", "--key", "testKey", "--name", "test", "--type", "String", "--value", "foo", "test.econf"]
+        let args =  ["rsa", "edit", "--key", "testKey", "--name", "test", "--type", "String", "--value", "foo", "test.econf"]
             res = execParserPure defaultPrefs cliParser args
         case res of
-            Success (EC (KeyAndConf "testKey" LocalRSA "test.econf") (EditConfCrypt "test" "foo" CString)) -> assertBool "can't fail" True
+            Success (EC (KeyAndConf (OnDisk "testKey") LocalRSA "test.econf") (EditConfCrypt "test" "foo" CString)) -> assertBool "can't fail" True
             Success a -> assertFailure ("Incorrectly parsed: "<> show a)
             Failure _ -> assertFailure "Should have parsed an AC"
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
 
    ,testCase "supports alternative argument labels" $ do
-        let args =  ["edit", "-k", "testKey", "-n", "test", "-t", "String", "-v", "foo", "test.econf"]
+        let args =  ["rsa", "edit", "-k", "testKey", "-n", "test", "-t", "String", "-v", "foo", "test.econf"]
             res = execParserPure defaultPrefs cliParser args
         case res of
-            Success (EC (KeyAndConf "testKey" LocalRSA "test.econf") (EditConfCrypt "test" "foo" CString)) -> assertBool "can't fail" True
+            Success (EC (KeyAndConf (OnDisk "testKey") LocalRSA "test.econf") (EditConfCrypt "test" "foo" CString)) -> assertBool "can't fail" True
             Success a -> assertFailure ("Incorrectly parsed: "<> show a)
             Failure _ -> assertFailure "Should have parsed an AC"
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
@@ -225,33 +260,34 @@ deleteCases = testGroup "delete" [
 validateCases :: TestTree
 validateCases = testGroup "validate" [
     testCase "validate requires a key" $ do
-        let args = ["validate", "test.econf"]
+        let args = ["rsa", "validate", "test.econf"]
             res = execParserPure defaultPrefs cliParser args
         case res of
             Failure _ -> assertBool "can't fail" True
             Success a -> assertFailure ("Incorrectly parsed: "<> show a)
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
    ,testCase "validate requires a config file" $ do
-        let args = ["validate", "--key", "testKey"]
+        let args = ["rsa", "validate", "--key", "testKey"]
             res = execParserPure defaultPrefs cliParser args
         case res of
             Failure _ -> assertBool "can't fail" True
             Success a -> assertFailure ("Incorrectly parsed: "<> show a)
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
    ,testCase "validate preserves the provided key file with -k" $ do
-        let args = ["validate", "-k", "testKey", "test.econf"]
+        let args = ["rsa", "validate", "-k", "testKey", "test.econf"]
             res = execParserPure defaultPrefs cliParser args
         case res of
-            Success (VC (KeyAndConf "testKey" LocalRSA "test.econf") ) -> assertBool "can't fail" True
+            Success (VC (KeyAndConf (OnDisk "testKey") LocalRSA "test.econf") ) -> assertBool "can't fail" True
             Success a -> assertFailure ("Incorrectly parsed: "<> show a)
             Failure _ -> assertFailure "Should have parsed an VC"
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
    ,testCase "validate preserves the provided key file with --key" $ do
-        let args = ["validate", "--key", "testKey","test.econf"]
+        let args = ["rsa", "validate", "--key", "testKey","test.econf"]
             res = execParserPure defaultPrefs cliParser args
         case res of
-            Success (VC (KeyAndConf "testKey" LocalRSA "test.econf") ) -> assertBool "can't fail" True
+            Success (VC (KeyAndConf (OnDisk "testKey") LocalRSA "test.econf") ) -> assertBool "can't fail" True
             Success a -> assertFailure ("Incorrectly parsed: "<> show a)
             Failure _ -> assertFailure "Should have parsed an VC"
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
     ]
+

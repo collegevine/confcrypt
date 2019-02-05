@@ -2,21 +2,20 @@ module ConfCrypt.CLI.Engine (
     run
     ) where
 
-import ConfCrypt.Types
-import ConfCrypt.Commands
-import ConfCrypt.Parser
+import ConfCrypt.Types (ConfCryptError(..), ConfCryptFile(..), ConfCryptM)
+import ConfCrypt.Commands (NewConfCrypt(..), ReadConfCrypt(..), ValidateConfCrypt(..),
+    AddConfCrypt(..), DeleteConfCrypt(..), evaluate)
+import ConfCrypt.Parser (parseConfCrypt)
 import ConfCrypt.Encryption
 import ConfCrypt.Default (emptyConfCryptFile)
-import ConfCrypt.Providers.AWS
-import ConfCrypt.CLI.API
+import ConfCrypt.Providers.AWS (AWSCtx, loadAwsCtx, KMSKeyId(..))
+import ConfCrypt.CLI.API (AnyCommand(..), Conf(..), KeyAndConf(..), KeyProvider(..), ParsedKey(..))
 
 import Conduit (ResourceT, runResourceT)
 import Control.Exception (catch)
 import Control.DeepSeq (force)
-import Control.Monad.Trans (MonadIO)
 import Control.Monad.Reader (MonadReader, ReaderT, runReaderT, withReaderT)
 import Control.Monad.Except (MonadError, ExceptT, runExceptT)
-import Control.Monad.Writer (MonadWriter, WriterT, execWriterT)
 import Crypto.PubKey.RSA.Types (PublicKey, PrivateKey)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
@@ -36,6 +35,7 @@ run NC = do
     either (\e -> print e *> exitFailure)
            pure
            res
+run (VER version) = pure [version]
 run parsedArguments = do
     let filePath = confFilePath parsedArguments
     lines <- T.readFile filePath
@@ -49,6 +49,8 @@ run parsedArguments = do
                 -- Requires Decryption
                 RC KeyAndConf {key, provider} ->
                     runConfCrypt parsedConfiguration $ runWithDecrypt key provider ReadConfCrypt
+                GC KeyAndConf {key, provider} cmd ->
+                    runConfCrypt parsedConfiguration $ runWithDecrypt key provider cmd
                 VC KeyAndConf {key, provider} ->
                     runConfCrypt parsedConfiguration $ runWithDecrypt key provider ValidateConfCrypt
 
@@ -66,19 +68,25 @@ run parsedArguments = do
 
         -- Inject an encryption context into the currently loaded environment. This varies dependng
         -- on whether its a local RSA key or a KMS key
-        runWithEncrypt k AWS cmd = do
-            ctx <- loadAwsCtx (KMSKeyId $ T.pack k)
+        runWithEncrypt (KmsId k) AWS cmd = do
+            ctx <- loadAwsCtx (KMSKeyId k)
             withReaderT (injectAWSCtx ctx) $ evaluate cmd
-        runWithEncrypt k LocalRSA cmd = do
+        runWithEncrypt UnNecessary AWS cmd = do
+            ctx <- loadAwsCtx (KMSKeyId "dummy")
+            withReaderT (injectAWSCtx ctx) $ evaluate cmd
+        runWithEncrypt (OnDisk k) LocalRSA cmd = do
             rsaKey <- loadRSAKey k
             withReaderT (injectPubKey rsaKey) $ evaluate cmd
 
         -- Inject a decryption context into the currently loaded environment. This varies dependng
         -- on whether its a local RSA key or a KMS key
-        runWithDecrypt k AWS cmd = do
-            ctx <- loadAwsCtx (KMSKeyId $ T.pack k)
+        runWithDecrypt (KmsId k) AWS cmd = do
+            ctx <- loadAwsCtx (KMSKeyId k)
             withReaderT (injectAWSCtx ctx) $ evaluate cmd
-        runWithDecrypt k LocalRSA cmd = do
+        runWithDecrypt UnNecessary AWS cmd = do
+            ctx <- loadAwsCtx (KMSKeyId "dummy")
+            withReaderT (injectAWSCtx ctx) $ evaluate cmd
+        runWithDecrypt (OnDisk k) LocalRSA cmd = do
             rsaKey <- loadRSAKey k
             withReaderT (injectPrivateKey rsaKey) $ evaluate cmd
 
@@ -91,16 +99,16 @@ run parsedArguments = do
         injectPrivateKey key (conf, _) = (conf, TextKey key)
 
 
-
 runConfCrypt ::
     ConfCryptFile
-    -> ConfCryptM IO () a
+    -> ConfCryptM IO () [T.Text]
     -> IO (Either ConfCryptError [T.Text])
 runConfCrypt file action =
-    runResourceT . runExceptT . execWriterT  $ runReaderT action (file, ())
+    runResourceT . runExceptT $ runReaderT action (file, ())
 
 confFilePath :: AnyCommand -> FilePath
 confFilePath  (RC KeyAndConf {conf}) = conf
+confFilePath  (GC KeyAndConf {conf} _) = conf
 confFilePath  (VC KeyAndConf {conf}) = conf
 confFilePath  (AC KeyAndConf {conf} _) = conf
 confFilePath  (EC KeyAndConf {conf} _) = conf
