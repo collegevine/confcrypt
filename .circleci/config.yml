@@ -100,7 +100,7 @@ jobs:
     steps:
     - checkout
 
-    - run: if ! [ -e ~/.local/bin/hpc-threshold ];
+    - run: if [ ! -x "$(command -v hpc-threshold)" ];
            then
                 stack install hpc-threshold
            fi
