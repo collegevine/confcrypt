@@ -57,7 +57,7 @@ jobs:
       <<: *defaults
       steps:
       - checkout
-      - run: source confcrypt-threshold-test.sh
+      - run: source threshold-test.sh
   coverage-job:
       <<: *defaults
       steps:
