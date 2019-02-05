@@ -37,7 +37,6 @@ module ConfCrypt.Types (
 import Conduit (ResourceT)
 import Control.Monad.Reader (MonadReader, ReaderT, runReaderT)
 import Control.Monad.Except (MonadError, ExceptT, runExceptT)
-import Control.Monad.Writer (MonadWriter, WriterT, execWriterT)
 import Control.DeepSeq (NFData)
 import qualified Crypto.PubKey.RSA.Types as RSA
 import GHC.Generics (Generic)
@@ -45,12 +44,11 @@ import qualified Data.Text as T
 import qualified Data.Map.Strict as M
 
 -- | The core transformer stack for ConfCrypt. The most important parts are the 'ReaderT' and
--- 'ResourceT', as the 'WriterT' and 'ExceptT' can both be replaced with explicit return types.
+-- 'ResourceT', as 'ExceptT' can be replaced with explicit return type.
 type ConfCryptM m ctx =
     ReaderT (ConfCryptFile, ctx) (
-            WriterT [T.Text] (
                 ExceptT ConfCryptError (
-                    ResourceT m)
+                    ResourceT m
                 )
         )
 

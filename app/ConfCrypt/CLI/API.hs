@@ -3,26 +3,32 @@ module ConfCrypt.CLI.API (
     Conf(..),
     KeyProvider(..),
     AnyCommand(..),
+    ParsedKey(..),
     cliParser
 ) where
 
 import ConfCrypt.Types (SchemaType(..))
-import ConfCrypt.Commands (AddConfCrypt(..), EditConfCrypt(..), DeleteConfCrypt(..))
+import ConfCrypt.Commands (GetConfCrypt(..), AddConfCrypt(..), EditConfCrypt(..), DeleteConfCrypt(..))
 
-import Options.Applicative
+import Options.Applicative (ParserInfo, Parser, progDesc, command, fullDesc, long, flag, metavar,
+    help, strOption, short, info, header, footer, strArgument, hsubparser, helper, (<**>))
 import qualified Data.Text as T
+import Paths_confcrypt (version)
+import Data.Version (showVersion)
 
-data KeyAndConf = KeyAndConf {key :: FilePath, provider :: KeyProvider, conf :: FilePath}
+data KeyAndConf = KeyAndConf {key :: ParsedKey, provider :: KeyProvider, conf :: FilePath}
     deriving (Eq, Show)
 newtype Conf = Conf FilePath
     deriving (Eq, Show)
 
 data AnyCommand
     = RC KeyAndConf
+    | GC KeyAndConf GetConfCrypt
     | AC KeyAndConf AddConfCrypt
     | EC KeyAndConf EditConfCrypt
     | DC Conf DeleteConfCrypt
     | VC KeyAndConf
+    | VER T.Text
     | NC
     deriving (Eq, Show)
 
@@ -31,36 +37,83 @@ data KeyProvider
     | LocalRSA
     deriving (Eq, Show)
 
+data ParsedKey
+    = OnDisk FilePath
+    | KmsId T.Text
+    | UnNecessary
+    deriving (Eq, Show)
+
 cliParser :: ParserInfo AnyCommand
 cliParser = info (commandParser <**> helper) $
         fullDesc <>
         (header "confcrypt: a tool for sane configuration management") <>
-        (footer "confcrypt's documentation and source is avaiable at <TODO fill me in>")
+        (footer "confcrypt's documentation and source is avaiable at https://github.com/collegevine/confcrypt")
 
 
 commandParser :: Parser AnyCommand
 commandParser = hsubparser
     (
-        command "add" add
+        command "aws" awsCmds
         <>
-        command "edit" edit
+        command "rsa" rsaCmds
+        <>
+        command "new" new
         <>
         command "delete" delete
         <>
-        command "read" readConf
-        <>
-        command "validate" validate
-        <>
-        command "new" new
+        command "version" vers
     )
 
-add :: ParserInfo AnyCommand
-add = info ( AC <$> keyAndConf <*> (AddConfCrypt <$> onlyName <*> onlyValue <*> onlyType))
+awsCmds :: ParserInfo AnyCommand
+awsCmds = info (
+    hsubparser (
+        command "add" (add AWS)
+        <>
+        command "edit" (edit AWS)
+        <>
+        command "read" (readConf AWS)
+        <>
+        command "get" (get AWS)
+        <>
+        command "validate" (validate AWS)
+        )
+    ) $
+    fullDesc <>
+    (header "Run using a local RSA key. This overloads the --key option to accept a file path to the public key.")
+
+rsaCmds :: ParserInfo AnyCommand
+rsaCmds = info (
+    hsubparser (
+        command "add" (add LocalRSA)
+        <>
+        command "edit" (edit LocalRSA)
+        <>
+        command "read" (readConf LocalRSA)
+        <>
+        command "get" (get LocalRSA)
+        <>
+        command "validate" (validate LocalRSA)
+        )
+    ) $
+    fullDesc <>
+    (header "Run using a local RSA key. This overloads the --key option to accept a file path to the public key.")
+
+
+vers :: ParserInfo AnyCommand
+vers = info (pure . VER . T.pack $ showVersion version)
+               (progDesc "The current version of confcrypt" <> fullDesc)
+
+add ::
+    KeyProvider
+    -> ParserInfo AnyCommand
+add provider = info ( AC <$> keyAndConf provider True <*> (AddConfCrypt <$> onlyName <*> onlyValue <*> onlyType))
            (progDesc "Add a new parameter to the configuration file. New parameters are added to the end of the file." <>
             fullDesc)
 
-edit :: ParserInfo AnyCommand
-edit = info ( EC <$> keyAndConf <*> (EditConfCrypt <$> onlyName <*> onlyValue <*> onlyType))
+edit ::
+    KeyProvider
+    -> ParserInfo AnyCommand
+edit provider = info ( EC <$> keyAndConf provider True <*> (EditConfCrypt <$> onlyName <*> onlyValue <*> onlyType))
            (progDesc "Modify an existing parameter in-place. This should preserve a clean diff." <>
             fullDesc)
 
@@ -69,13 +122,24 @@ delete = info ( DC <$> getConf <*> (DeleteConfCrypt <$> onlyName))
            (progDesc "Removes an existing parameter from the configuration." <>
             fullDesc)
 
-readConf :: ParserInfo AnyCommand
-readConf = info ( RC <$> keyAndConf )
+readConf ::
+    KeyProvider
+    -> ParserInfo AnyCommand
+readConf provider = info ( RC <$> keyAndConf provider False)
            (progDesc "Read in the provided config and decrypt it with the key. Results are printed to StdOut." <>
             fullDesc)
 
-validate :: ParserInfo AnyCommand
-validate = info ( VC <$> keyAndConf)
+get ::
+    KeyProvider
+    -> ParserInfo AnyCommand
+get provider = info ( GC <$> keyAndConf provider False <*> (GetConfCrypt <$> onlyName))
+            (progDesc "Get a single parameter value from the configuration file." <>
+            fullDesc)
+
+validate ::
+    KeyProvider
+    -> ParserInfo AnyCommand
+validate provider = info ( VC <$> keyAndConf provider False)
            (progDesc "Check that the configuration is self-consistent and obeys the confcrypt rules." <>
             fullDesc)
 
@@ -84,18 +148,34 @@ new  = info (pure NC)
             (progDesc "Produce a new boilerplate confcrypt file. This should be piped into your desired config." <>
              fullDesc)
 
-keyAndConf :: Parser KeyAndConf
-keyAndConf =
+keyAndConf ::
+    KeyProvider
+    -> Bool -- This is an ugly bit of overloading
+    -> Parser KeyAndConf
+keyAndConf AWS True =
     KeyAndConf <$>
-        strOption (
-            long "key" <>
-            short 'k' <>
-            metavar "KEY" <>
-            help "The path to the private RSA key used to encrypt this file."
-            ) <*>
-        getProvider <*>
+        (KmsId . T.pack <$> parseKey) <*>
+        pure AWS <*>
+        onlyConf
+keyAndConf AWS False =
+    KeyAndConf <$>
+        pure UnNecessary <*>
+        pure AWS <*>
+        onlyConf
+keyAndConf LocalRSA _ =
+    KeyAndConf <$>
+        (OnDisk <$> parseKey) <*>
+        pure LocalRSA <*>
         onlyConf
 
+parseKey :: Parser String
+parseKey =
+    strOption (
+        long "key" <>
+        short 'k' <>
+        metavar "KEY" <>
+        help "The path to the key. May be a KMS id or RSA file path, depending on command"
+        )
 getConf :: Parser Conf
 getConf = Conf <$> onlyConf
 
@@ -128,11 +208,3 @@ onlyType =
         )
     where
         fromString = read . (:) 'C'
-
-getProvider :: Parser KeyProvider
-getProvider = flag LocalRSA AWS (
-    long "use-aws" <>
-    help "Toggles whether the --key indicates an RSA keyfile or an AWS KMS key identifer"
-    )
-
-
