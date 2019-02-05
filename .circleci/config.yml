@@ -39,10 +39,45 @@ jobs:
         - circle20-
 
     - run:
-        # All tests:
         command: sysconfcpus -n 2 stack test :confcrypt-detailed-tests
+        no_output_timeout: 3600s
+
+    - store_test_results:
+        path: $CIRCLE_ARTIFACTS
+    - store_artifacts:
+        path: $CIRCLE_ARTIFACTS
+    - store_artifacts:
+        path: $CIRCLE_TEST_REPORTS
+  threshold-test-job:
+    <<: *defaults
+    steps:
+    - checkout
+    - run: mkdir -p $CIRCLE_ARTIFACTS $CIRCLE_TEST_REPORTS
+
+    # Install libsysconfcpus, which allows us to intercept calls from ghc -> host OS and return the number of available cores rather
+    # than the total number of host cores. ie. run the build w/ the allowed 2 cores, instead of 32 or whatever the host indicates.
+    - run: if [ ! -d sysconfcpus/bin ];
+           then
+                buildDir=pwd
+                git clone https://github.com/obmarg/libsysconfcpus.git;
+                cd libsysconfcpus ;
+                ./configure;
+                make && make install;
+                cd ..;
+           fi
+
+    - restore_cache:
+        keys:
+        # This branch if available
+        - circle20-{{ .Branch }}-
+        # Default branch if not
+        - circle20-master-
+        # Any branch if there are none on the default branch - this should be unnecessary if you have your default branch configured correctly
+        - circle20-
+
+    - run:
         # All tests with default 80% threshold:
-        #command: sysconfcpus -n 2 stack test :confcrypt-threshold-tests --coverage
+        command: sysconfcpus -n 2 stack test :confcrypt-threshold-tests --coverage
         # All tests with provided threshold:
         # ex: command: sysconfcpus -n 2 stack test :confcrypt-threshold-tests --coverage --ta "--threshold 90"
         no_output_timeout: 3600s
@@ -53,7 +88,7 @@ jobs:
         path: $CIRCLE_ARTIFACTS
     - store_artifacts:
         path: $CIRCLE_TEST_REPORTS
-  threshold-test-job:
+  threshold-test-script-job:
       <<: *defaults
       steps:
       - checkout
