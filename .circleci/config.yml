@@ -99,10 +99,9 @@ jobs:
     <<: *defaults
     steps:
     - checkout
-
-    - run: if [ ! -x "$(command -v hpc-threshold)" ];
+    - run: if [ ! -e ~/.local/bin/hpc-threshold ];
            then
-                stack install hpc-threshold
+                stack install hpc-threshold;
            fi
 
     - restore_cache:
