@@ -39,7 +39,12 @@ jobs:
         - circle20-
 
     - run:
-        command: sysconfcpus -n 2 stack test
+        # All tests:
+        command: sysconfcpus -n 2 stack test :confcrypt-detailed-tests
+        # All tests with default 80% threshold:
+        #command: sysconfcpus -n 2 stack test :confcrypt-threshold-tests --coverage
+        # All tests with provided threshold:
+        # ex: command: sysconfcpus -n 2 stack test :confcrypt-threshold-tests --coverage --ta "--threshold 90"
         no_output_timeout: 3600s
 
     - store_test_results:
@@ -48,6 +53,16 @@ jobs:
         path: $CIRCLE_ARTIFACTS
     - store_artifacts:
         path: $CIRCLE_TEST_REPORTS
+  threshold-test-job:
+      <<: *defaults
+      steps:
+      - checkout
+      - run: source confcrypt-threshold-test.sh
+  coverage-job:
+      <<: *defaults
+      steps:
+      - checkout
+      - run: source coverage.sh
   lint-job:
       <<: *defaults
       steps:
@@ -58,5 +73,9 @@ workflows:
 
     build-and-test:
         jobs:
-            - test-job
+#            - test-job
+            - threshold-test-job
+            - coverage-job:
+                requires:
+                    - threshold-test-job
             - lint-job
