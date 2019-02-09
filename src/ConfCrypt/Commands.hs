@@ -24,6 +24,7 @@ import ConfCrypt.Types
 import ConfCrypt.Encryption (MonadEncrypt, MonadDecrypt, encryptValue, decryptValue, TextKey(..), RemoteKey(..))
 import ConfCrypt.Validation (runAllRules)
 import ConfCrypt.Providers.AWS (AWSCtx)
+import ConfCrypt.Template (renderTemplate)
 
 import Control.Arrow (second)
 import Control.Monad (unless, (<=<))
@@ -50,14 +51,26 @@ class Monad m => Command a m where
     evaluate :: a -> m [T.Text]
 
 -- | Read and return the full contents of an encrypted file. Provides support for using a local RSA key or an externl KMS service
-data ReadConfCrypt = ReadConfCrypt
+data ReadConfCrypt = ReadConfCrypt {rTemplate :: Maybe T.Text}
+    deriving (Eq, Read, Show, Generic)
+
 instance (Monad m, MonadDecrypt (ConfCryptM m key) key) => Command ReadConfCrypt (ConfCryptM m key) where
-    evaluate _ = do
+    evaluate (ReadConfCrypt template) = do
         (ccFile, ctx) <- ask
         let params = parameters ccFile
-        transformed <- mapM (\p -> decryptedParam  p <$> decryptValue ctx (paramValue p)) params
-        processReadLines transformed ccFile
+        case template of
+            Nothing -> do
+                transformed <- mapM (\p -> decryptedParam p <$> decryptValue ctx (paramValue p)) params
+                processReadLines transformed ccFile
+            Just tpl -> do
+                params' <- sequence $ decryptParam ctx <$> params
+                pure $ renderTemplate tpl <$> params'
+
         where
+            decryptParam ctx (Parameter paramName value paramType) = do
+                value' <- decryptValue ctx value
+                pure $ Parameter {paramName, paramValue = value', paramType}
+
             decryptedParam param v = ParameterLine ParamLine {pName = paramName param, pValue = v}
 
             -- Given a transformation, apply it to the current file contents then write them to the output buffer

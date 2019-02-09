@@ -47,8 +47,8 @@ run parsedArguments = do
             result <- case parsedArguments of
 
                 -- Requires Decryption
-                RC KeyAndConf {key, provider} ->
-                    runConfCrypt parsedConfiguration $ runWithDecrypt key provider ReadConfCrypt
+                RC KeyAndConf {key, provider} cmd ->
+                    runConfCrypt parsedConfiguration $ runWithDecrypt key provider cmd
                 GC KeyAndConf {key, provider} cmd ->
                     runConfCrypt parsedConfiguration $ runWithDecrypt key provider cmd
                 VC KeyAndConf {key, provider} ->
@@ -107,7 +107,7 @@ runConfCrypt file action =
     runResourceT . runExceptT $ runReaderT action (file, ())
 
 confFilePath :: AnyCommand -> FilePath
-confFilePath  (RC KeyAndConf {conf}) = conf
+confFilePath  (RC KeyAndConf {conf} _) = conf
 confFilePath  (GC KeyAndConf {conf} _) = conf
 confFilePath  (VC KeyAndConf {conf}) = conf
 confFilePath  (AC KeyAndConf {conf} _) = conf
