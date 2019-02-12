@@ -50,7 +50,7 @@ readCases = testGroup "read" [
         let args = ["rsa", "read", "-k", "testKey", "test.econf"]
             res = execParserPure defaultPrefs cliParser args
         case res of
-            Success (RC (KeyAndConf (OnDisk "testKey") LocalRSA "test.econf") ) -> assertBool "can't fail" True
+            Success (RC (KeyAndConf (OnDisk "testKey") LocalRSA "test.econf") _) -> assertBool "can't fail" True
             Success a -> assertFailure ("Incorrectly parsed: "<> show a)
             Failure _ -> assertFailure "Should have parsed an RC"
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
@@ -58,7 +58,7 @@ readCases = testGroup "read" [
         let args = ["rsa", "read", "--key", "testKey","test.econf"]
             res = execParserPure defaultPrefs cliParser args
         case res of
-            Success (RC (KeyAndConf (OnDisk "testKey") LocalRSA "test.econf") ) -> assertBool "can't fail" True
+            Success (RC (KeyAndConf (OnDisk "testKey") LocalRSA "test.econf") _) -> assertBool "can't fail" True
             Success a -> assertFailure ("Incorrectly parsed: "<> show a)
             Failure _ -> assertFailure "Should have parsed an RC"
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"

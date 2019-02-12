@@ -10,12 +10,14 @@ module ConfCrypt.CLI.API (
 import ConfCrypt.Types (SchemaType(..))
 import ConfCrypt.Commands (GetConfCrypt(..), AddConfCrypt(..), EditConfCrypt(..), DeleteConfCrypt(..), ReadConfCrypt(..))
 
-import Options.Applicative (ParserInfo, Parser, progDesc, command, fullDesc, long, flag, metavar, maybeReader,
-    help, strOption, short, info, header, footer, strArgument, hsubparser, helper, (<**>), value, option, auto)
+import Options.Applicative
+       (ParserInfo, Parser, progDesc, command, fullDesc, long, flag,
+        metavar, maybeReader, help, strOption, short, info, header, footer,
+        strArgument, hsubparser, helper, (<**>), value, option, auto,
+        ReadM)
 import qualified Data.Text as T
 import Paths_confcrypt (version)
 import Data.Version (showVersion)
-import Options.Applicative (ReadM)
 import Text.Read (readMaybe)
 
 data KeyAndConf = KeyAndConf {key :: ParsedKey, provider :: KeyProvider, conf :: FilePath}

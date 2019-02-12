@@ -100,7 +100,7 @@ readTests = testGroup "Read" [
             probablyKP <- runExceptT $ unpackPrivateRSAKey dangerousTestKey
             privateKey <- either (assertFailure . show) (pure . project ) probablyKP :: IO RSA.PrivateKey
             ccf <- either (assertFailure . show) pure testLines
-            runResourceT . runExceptT $ runReaderT (evaluate ReadConfCrypt) (ccf, TextKey privateKey) :: IO (Either ConfCryptError [T.Text])
+            runResourceT . runExceptT $ runReaderT (evaluate $ ReadConfCrypt Nothing) (ccf, TextKey privateKey) :: IO (Either ConfCryptError [T.Text])
 
 
 addTests :: TestTree
