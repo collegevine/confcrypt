@@ -16,9 +16,9 @@ import Text.Megaparsec.Error (errorBundlePretty)
 -- %[a-z] %x %y %z
 
 
-renderTemplate :: Text -> Either TemplateParseError (Parameter -> Text)
+renderTemplate :: Text -> Either Text (Parameter -> Text)
 renderTemplate template = case parse parseTemplate "" template of
-    Left err -> Left . TemplateParseError . pack $ show err
+    Left err -> Left . pack $ show err
     Right parsed -> Right (\param -> foldMap (replaceVars param) parsed)
     where
         replaceVars p (Text_ t)         = t

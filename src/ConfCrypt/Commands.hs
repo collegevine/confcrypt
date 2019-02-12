@@ -64,7 +64,7 @@ instance (Monad m, MonadDecrypt (ConfCryptM m key) key) => Command ReadConfCrypt
                 processReadLines transformed ccFile
             Just tpl ->
                 case renderTemplate tpl of
-                    Left e -> pure ["" :: T.Text] -- how to return an error from here?
+                    Left e -> throwError $ FormatParseError e
                     Right parsedTpl -> do
                         params' <- sequence $ decryptParam ctx <$> params
                         pure $ parsedTpl <$> params'
