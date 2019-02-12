@@ -67,9 +67,9 @@ instance (Monad m, MonadDecrypt (ConfCryptM m key) key) => Command ReadConfCrypt
                 pure $ renderTemplate tpl <$> params'
 
         where
-            decryptParam ctx (Parameter paramName value paramType) = do
-                value' <- decryptValue ctx value
-                pure $ Parameter {paramName, paramValue = value', paramType}
+            decryptParam ctx param = do
+                value' <- decryptValue ctx $ paramValue param
+                pure param {paramValue = value'}
 
             decryptedParam param v = ParameterLine ParamLine {pName = paramName param, pValue = v}
 

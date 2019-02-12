@@ -2,11 +2,11 @@ module ConfCrypt.Template (
     renderTemplate
     ) where
 
-import Text.Megaparsec
-import Text.Megaparsec.Char
-import Data.Text
+import Data.Text (Text, pack)
 import ConfCrypt.Types (Parameter(..))
-import qualified Data.Text as T
+import Control.Monad (void)
+import Text.Megaparsec (Parsec, (<|>), anySingle, try, noneOf, many, some, parse)
+import Text.Megaparsec.Char (string')
 
 -- "text %k=%v %%"
 -- "text foo=bar %"
@@ -22,11 +22,10 @@ renderTemplate template param = case parse parseTemplate "" template of
         replaceVars (Text_ t)         = t
         replaceVars (Variable_ Name)  = paramName param
         replaceVars (Variable_ Value) = paramValue param
-        replaceVars (Variable_ Type)  = T.pack . show . paramType $ param
+        replaceVars (Variable_ Type)  = pack . show . paramType $ param
 
 
 type Parser = Parsec MyParseError Text
-type ApplyTemplate = Text -> Text -> Text -> Text
 newtype MyParseError = MyParseError Text deriving (Show, Ord, Eq)
 
 -- type Parser = Parsec ParseError Text
@@ -42,29 +41,19 @@ data Template = Variable_ Variable | Text_ Text
     deriving Show
 
 parseLiteral :: Parser Text
-parseLiteral = let
-    escapedPercent = do
-        _ <- try $ string' "%%"
-        pure "%"
-    otherText = pack <$> some (noneOf ['%'])
-    in escapedPercent <|> otherText
+parseLiteral = "%" <$ try (string' "%%") <|> pack <$> some (noneOf ("%" :: String))
 
 
 data Variable = Name | Value | Type deriving Show
 
 parseVariable :: Parser Variable
-parseVariable = let
-    tryName = do
-        _ <- try $ string' "%n"
-        pure Name
-    tryVal = do
-        _ <- try $ string' "%v"
-        pure Value
-    tryType = do
-        _ <- try $ string' "%t"
-        pure Type
-    unrecognized = do
-        _ <- string' "%"
-        invalid <- anySingle
-        fail $ "Unrecognized variable " ++ [invalid]
-    in tryName <|> tryVal <|> tryType <|> unrecognized
+parseVariable =
+        Name  <$ try (string' "%n")
+    <|> Value <$ try (string' "%v")
+    <|> Type  <$ try (string' "%t")
+    <|> unrecognized
+    where
+        unrecognized = do
+            void $ string' "%"
+            invalid <- anySingle
+            fail $ "Unrecognized variable " ++ [invalid]
