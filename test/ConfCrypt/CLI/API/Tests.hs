@@ -3,7 +3,7 @@ module ConfCrypt.CLI.API.Tests (
     ) where
 
 import ConfCrypt.CLI.API
-import ConfCrypt.Commands (GetConfCrypt(..), AddConfCrypt(..), EditConfCrypt(..), DeleteConfCrypt(..))
+import ConfCrypt.Commands (GetConfCrypt(..), AddConfCrypt(..), EditConfCrypt(..), DeleteConfCrypt(..), ReadConfCrypt(..))
 import ConfCrypt.Types
 
 import ConfCrypt.Common
@@ -59,6 +59,14 @@ readCases = testGroup "read" [
             res = execParserPure defaultPrefs cliParser args
         case res of
             Success (RC (KeyAndConf (OnDisk "testKey") LocalRSA "test.econf") _) -> assertBool "can't fail" True
+            Success a -> assertFailure ("Incorrectly parsed: "<> show a)
+            Failure _ -> assertFailure "Should have parsed an RC"
+            CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
+    ,testCase "read preserves the provided key file with --key" $ do
+        let args = ["rsa", "read", "--key", "testKey","test.econf", "--format", "foo"]
+            res = execParserPure defaultPrefs cliParser args
+        case res of
+            Success (RC (KeyAndConf (OnDisk "testKey") LocalRSA "test.econf") (ReadConfCrypt (Just "foo"))) -> assertBool "can't fail" True
             Success a -> assertFailure ("Incorrectly parsed: "<> show a)
             Failure _ -> assertFailure "Should have parsed an RC"
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"

@@ -2,11 +2,13 @@ module ConfCrypt.Template (
     renderTemplate
     ) where
 
-import Data.Text (Text, pack)
-import ConfCrypt.Types (Parameter(..))
+import ConfCrypt.Types (Parameter(..), typeToOutputString)
 import Control.Monad (void)
+import Data.Maybe (maybe)
+import Data.Text (Text, pack)
 import Text.Megaparsec (Parsec, (<|>), anySingle, try, noneOf, many, some, parse)
 import Text.Megaparsec.Char (string')
+import Text.Megaparsec.Error (errorBundlePretty)
 
 -- "text %k=%v %%"
 -- "text foo=bar %"
@@ -14,19 +16,19 @@ import Text.Megaparsec.Char (string')
 -- %[a-z] %x %y %z
 
 
-renderTemplate :: Text -> Parameter -> Text
-renderTemplate template param = case parse parseTemplate "" template of
-    Left err -> pack . show $ err
-    Right parsed -> foldMap replaceVars parsed
+renderTemplate :: Text -> Either TemplateParseError (Parameter -> Text)
+renderTemplate template = case parse parseTemplate "" template of
+    Left err -> Left . TemplateParseError . pack $ show err
+    Right parsed -> Right (\param -> foldMap (replaceVars param) parsed)
     where
-        replaceVars (Text_ t)         = t
-        replaceVars (Variable_ Name)  = paramName param
-        replaceVars (Variable_ Value) = paramValue param
-        replaceVars (Variable_ Type)  = pack . show . paramType $ param
+        replaceVars p (Text_ t)         = t
+        replaceVars p (Variable_ Name)  = paramName p
+        replaceVars p (Variable_ Value) = paramValue p
+        replaceVars p (Variable_ Type)  = maybe "" typeToOutputString $ paramType p
 
 
-type Parser = Parsec MyParseError Text
-newtype MyParseError = MyParseError Text deriving (Show, Ord, Eq)
+type Parser = Parsec TemplateParseError Text
+newtype TemplateParseError = TemplateParseError Text deriving (Show, Ord, Eq)
 
 -- type Parser = Parsec ParseError Text
 

@@ -62,9 +62,12 @@ instance (Monad m, MonadDecrypt (ConfCryptM m key) key) => Command ReadConfCrypt
             Nothing -> do
                 transformed <- mapM (\p -> decryptedParam p <$> decryptValue ctx (paramValue p)) params
                 processReadLines transformed ccFile
-            Just tpl -> do
-                params' <- sequence $ decryptParam ctx <$> params
-                pure $ renderTemplate tpl <$> params'
+            Just tpl ->
+                case renderTemplate tpl of
+                    Left e -> pure ["" :: T.Text] -- how to return an error from here?
+                    Right parsedTpl -> do
+                        params' <- sequence $ decryptParam ctx <$> params
+                        pure $ parsedTpl <$> params'
 
         where
             decryptParam ctx param = do
