@@ -6,9 +6,8 @@ import ConfCrypt.Types (Parameter(..), typeToOutputString)
 import Control.Monad (void)
 import Data.Maybe (maybe)
 import Data.Text (Text, pack)
-import Text.Megaparsec (Parsec, (<|>), anySingle, try, noneOf, many, some, parse)
+import Text.Megaparsec (Parsec, (<|>), anySingle, try, noneOf, many, some, parse, errorBundlePretty, ShowErrorComponent)
 import Text.Megaparsec.Char (string')
-import Text.Megaparsec.Error (errorBundlePretty)
 
 -- "text %k=%v %%"
 -- "text foo=bar %"
@@ -18,7 +17,7 @@ import Text.Megaparsec.Error (errorBundlePretty)
 
 renderTemplate :: Text -> Either Text (Parameter -> Text)
 renderTemplate template = case parse parseTemplate "" template of
-    Left err -> Left . pack $ show err
+    Left err -> Left . pack $ errorBundlePretty err
     Right parsed -> Right (\param -> foldMap (replaceVars param) parsed)
     where
         replaceVars p (Text_ t)         = t
@@ -28,7 +27,7 @@ renderTemplate template = case parse parseTemplate "" template of
 
 
 type Parser = Parsec TemplateParseError Text
-newtype TemplateParseError = TemplateParseError Text deriving (Show, Ord, Eq)
+newtype TemplateParseError = TemplateParseError Text deriving (Show, Ord, Eq, ShowErrorComponent)
 
 -- type Parser = Parsec ParseError Text
 
