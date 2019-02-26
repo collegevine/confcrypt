@@ -9,7 +9,7 @@ As soon as an application is deployed or built on more than a single machine, yo
 brew tap collegevine/brew
 brew cask install confcrypt
 ```
-#### Windows, Linux, & OSX native 
+#### Windows, Linux, & OSX native
 
 1. If you don't have Haskell installed and working already, you'll need it.  Install `stack` from [haskellstack.org](https://haskellstack.org/).
 2. At the root of this repo, run `stack install`.  (Takes 10-15 minutes.)
@@ -75,5 +75,7 @@ brew cask install confcrypt
     # TIMEOUT_MS : Int
     # TIMEOUT_MS = 300
     ```
+
+    *Note* confcrypt files must end with a trailing newline.
 
     While the default config created via `confcrypt new ...` places the schema on line `n` and parameters on `n+1`, there's no required ordering for the file. In fact, you can choose to entirely omit the schema and only store configuration paraemters in an `econf` file, but this will cause `confcrypt validate` to fail.

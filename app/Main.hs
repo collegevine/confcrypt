@@ -12,3 +12,6 @@ main = do
     parsedArguments <- execParser cliParser
     results <- run parsedArguments
     traverse_ (putStrLn . unpack) results
+    -- The ^ `putStrLn` call is important to preserve the trailing newline. Consider
+    -- moving this into the library to make the code read more clearly.
+    -- There's no reason that `writeFullContentsToBuffer` can't tag each line with a trailing newline

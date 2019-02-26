@@ -46,8 +46,6 @@ data FileAction
 -- | All confcrypt commands can be generalized into an 'evaluate' call. In reality, instances likely
 -- need to provide some environment, although that's not required as everything could be contained
 -- as record fields of the command argument itself.
---
--- In reality the return type of 'evalutate' is 'Text', this needs to be cleaned up in the upcoming version.
 class Monad m => Command a m where
     evaluate :: a -> m [T.Text]
 

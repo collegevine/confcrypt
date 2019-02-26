@@ -64,8 +64,8 @@ bufferWriteProperties :: TestTree
 bufferWriteProperties  = testGroup "Buffer write" [
     testProperty "parse (writerBuffer xs) == xs" $ \(ValidCCF ccf)-> let
         fc = fileContents ccf
-        output = (<> "\n") . T.intercalate "\n" $ join (writeFullContentsToBuffer True fc)
-        parseRes = parseConfCrypt "" output
+        output = T.intercalate "\n" $ join (writeFullContentsToBuffer True fc)
+        parseRes = parseConfCrypt "" (if T.null output then output else output <> "\n")
         in either (const False)
                   (\ccf' -> fileContents ccf' == fc)
                   parseRes

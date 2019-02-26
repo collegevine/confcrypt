@@ -26,7 +26,9 @@ explicitFiles :: TestTree
 explicitFiles = testGroup "specific test files" [
     testCase "default config" $ do
         let res = parseConfCrypt "default config" defaultConf
-        isRight res @=? True
+        either  ( assertFailure . show )
+                ( const $ assertBool "" True)
+                res
 
    ,testCase "empty config" $ do
         let res = parseConfCrypt "empty conf" ""
@@ -38,7 +40,9 @@ explicitFiles = testGroup "specific test files" [
 
     ,testCase "multiple line breaks" $ do
         let res = parseConfCrypt "line breaks" multipleLineBreaks
-        isRight res @=? True
+        either  ( assertFailure . show )
+                ( const $ assertBool "" True)
+                res
 
    ,testCase "requires a trailing newline" $ do
         let Right res = parseConfCrypt "No newline" "# {"
@@ -70,6 +74,12 @@ explicitFiles = testGroup "specific test files" [
                         (pure . head . parameters)
                         res
         paramValue param @=? "foobar"
+    ,testCase "Invalid files fail completely, no results are returned" $ do
+        let res = parseConfCrypt "invalid" invalidFile
+        parseResult <- either (const $ pure True)
+                              (const $ assertFailure "Expected a parser failure")
+                              res
+        parseResult @=? True
     ]
 
 
@@ -91,7 +101,7 @@ defaultConf = "# confcrypt schema#more things\n\
     \ USE_SSL : Boolean\n\
     \ USE_SSL = True\n\
     \ TIMEOUT_MS : Int\n\
-    \ TIMEOUT_MS = 300"
+    \ TIMEOUT_MS = 300\n"
 
 allComments :: T.Text
 allComments = "# Configuration parameters may be either a String, Int, or Boolean\n\
@@ -110,7 +120,12 @@ multipleLineBreaks = "# For example:\n\n\n\
     \ USE_SSL : Boolean\n\n\n\n\
     \ USE_SSL = True\n\n\
     \ TIMEOUT_MS : Int\n\
-    \ TIMEOUT_MS = 300"
+    \ TIMEOUT_MS = 300\n"
+
+invalidFile :: T.Text
+invalidFile = "TIMEOUT_MS : Int\n\
+    \ TIMEOUT_MS = 300\n\
+    \ not a legitiamte file\n"
 
 wrappedParameter:: T.Text
 wrappedParameter = "Test : String\n\
