@@ -50,7 +50,7 @@ jobs:
           key: cci-haskell-v1-{{ checksum "package.yaml" }}-{{ checksum "stack.yaml" }}
           paths:
             - ~/.stack
-            - ~/.stack-work
+            - .stack-work
     - restore_cache:
         keys:
         # This branch if available
@@ -59,12 +59,18 @@ jobs:
         - circle20-master-
         # Any branch if there are none on the default branch - this should be unnecessary if you have your default branch configured correctly
         - circle20-
+        - haskell-stack
     - run:
         # All tests with default 80% threshold:
         command: sysconfcpus -n 2 stack test :confcrypt-threshold-tests --coverage
         # All tests with provided threshold:
         # ex: command: sysconfcpus -n 2 stack test :confcrypt-threshold-tests --coverage --ta "--threshold 90"
         no_output_timeout: 3600s
+    - save_cache:
+          name: Stack Artifacts
+          key: haskell-stack
+          paths:
+            - .stack-work
 
   coverage-job:
     <<: *defaults
@@ -78,6 +84,7 @@ jobs:
         - circle20-master-
         # Any branch if there are none on the default branch - this should be unnecessary if you have your default branch configured correctly
         - circle20-
+        - haskell-stack
     - run:
         command: stack hpc report --all 2>&1 | hpc-threshold
         no_output_timeout: 3600s
