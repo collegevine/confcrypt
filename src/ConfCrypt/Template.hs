@@ -9,12 +9,6 @@ import Data.Text (Text, pack)
 import Text.Megaparsec (Parsec, (<|>), anySingle, try, noneOf, many, some, parse, errorBundlePretty, ShowErrorComponent)
 import Text.Megaparsec.Char (string')
 
--- "text %k=%v %%"
--- "text foo=bar %"
--- ["text ", k, "=", v, " %"]
--- %[a-z] %x %y %z
-
-
 renderTemplate :: Text -> Either Text (Parameter -> Text)
 renderTemplate template = case parse parseTemplate "" template of
     Left err -> Left . pack $ errorBundlePretty err
@@ -28,8 +22,6 @@ renderTemplate template = case parse parseTemplate "" template of
 
 type Parser = Parsec TemplateParseError Text
 newtype TemplateParseError = TemplateParseError Text deriving (Show, Ord, Eq, ShowErrorComponent)
-
--- type Parser = Parsec ParseError Text
 
 parseTemplate :: Parser [Template]
 parseTemplate =
