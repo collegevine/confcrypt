@@ -7,7 +7,7 @@ defaults: &defaults
       CIRCLE_TEST_REPORTS: /tmp/circleci-test-results  # Came from Circle's own translation utility, not sure if really needed
 
     docker:
-    - image: haskell:8.4.3
+    - image: jhenligne/confcrypt
 
 version: 2
 jobs:
@@ -16,19 +16,6 @@ jobs:
     steps:
     - checkout
     - run: mkdir -p $CIRCLE_ARTIFACTS $CIRCLE_TEST_REPORTS
-
-    # Install libsysconfcpus, which allows us to intercept calls from ghc -> host OS and return the number of available cores rather
-    # than the total number of host cores. ie. run the build w/ the allowed 2 cores, instead of 32 or whatever the host indicates.
-    - run: if [ ! -d sysconfcpus/bin ];
-           then
-                buildDir=pwd
-                git clone https://github.com/obmarg/libsysconfcpus.git;
-                cd libsysconfcpus ;
-                ./configure;
-                make && make install;
-                cd ..;
-           fi
-
     - restore_cache:
         keys:
         # This branch if available
@@ -37,11 +24,9 @@ jobs:
         - circle20-master-
         # Any branch if there are none on the default branch - this should be unnecessary if you have your default branch configured correctly
         - circle20-
-
     - run:
         command: sysconfcpus -n 2 stack test :confcrypt-detailed-tests
         no_output_timeout: 3600s
-
     - store_test_results:
         path: $CIRCLE_ARTIFACTS
     - store_artifacts:
@@ -66,19 +51,6 @@ jobs:
           paths:
             - ~/.stack
             - ~/.stack-work
-
-    # Install libsysconfcpus, which allows us to intercept calls from ghc -> host OS and return the number of available cores rather
-    # than the total number of host cores. ie. run the build w/ the allowed 2 cores, instead of 32 or whatever the host indicates.
-    - run: if [ ! -d sysconfcpus/bin ];
-           then
-                buildDir=pwd
-                git clone https://github.com/obmarg/libsysconfcpus.git;
-                cd libsysconfcpus ;
-                ./configure;
-                make && make install;
-                cd ..;
-           fi
-
     - restore_cache:
         keys:
         # This branch if available
@@ -87,7 +59,6 @@ jobs:
         - circle20-master-
         # Any branch if there are none on the default branch - this should be unnecessary if you have your default branch configured correctly
         - circle20-
-
     - run:
         # All tests with default 80% threshold:
         command: sysconfcpus -n 2 stack test :confcrypt-threshold-tests --coverage
@@ -99,11 +70,6 @@ jobs:
     <<: *defaults
     steps:
     - checkout
-    - run: if [ ! -e ~/.local/bin/hpc-threshold ];
-           then
-                stack install hpc-threshold;
-           fi
-
     - restore_cache:
         keys:
         # This branch if available
@@ -112,24 +78,10 @@ jobs:
         - circle20-master-
         # Any branch if there are none on the default branch - this should be unnecessary if you have your default branch configured correctly
         - circle20-
-
     - run:
-        command: stack hpc report --all 2>&1 | hpc-threshold > hpc-threshold.log
+        command: stack hpc report --all 2>&1 | hpc-threshold
         no_output_timeout: 3600s
 
-    - store_test_results:
-        path: hpc-threshold.log
-
-  threshold-test-script-job:
-      <<: *defaults
-      steps:
-      - checkout
-      - run: source threshold-test.sh
-  coverage-script-job:
-      <<: *defaults
-      steps:
-      - checkout
-      - run: source coverage.sh
   lint-job:
       <<: *defaults
       steps:
