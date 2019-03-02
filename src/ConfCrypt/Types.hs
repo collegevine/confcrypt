@@ -42,6 +42,7 @@ import qualified Crypto.PubKey.RSA.Types as RSA
 import GHC.Generics (Generic)
 import qualified Data.Text as T
 import qualified Data.Map.Strict as M
+import Text.Megaparsec.Error (ShowErrorComponent, showErrorComponent)
 
 -- | The core transformer stack for ConfCrypt. The most important parts are the 'ReaderT' and
 -- 'ResourceT', as 'ExceptT' can be replaced with explicit return type.
@@ -65,7 +66,27 @@ data ConfCryptError
     | UnknownParameter T.Text
     | WrongFileAction T.Text
     | CleanupError T.Text
-    deriving (Show, Generic, Eq, Ord)
+    deriving (Generic, Eq, Ord)
+
+instance Show ConfCryptError where
+    show (ParserError msg) = "ParserError: "<> T.unpack msg
+    show NonRSAKey = "NonRSAKey"
+    show (KeyUnpackingError msg) = "KeyUnpackingError: "<> T.unpack msg
+    show (DecryptionError msg) = "DecryptionError: "<> T.unpack msg
+    show (AWSDecryptionError msg) = "AWSDecryptionError: "<> T.unpack msg
+    show (AWSEncryptionError msg) = "AWSEncryptionError: "<> T.unpack msg
+    show (EncryptionError err) = "EncryptionError: "<> show err
+    show (MissingLine msg) = "MissingLine: "<> T.unpack msg
+    show (UnknownParameter msg) = "UnknownParameter: "<> T.unpack msg
+    show (WrongFileAction msg) = "WrongFileAction: "<> T.unpack msg
+    show (CleanupError msg) = "CleanupError: "<> T.unpack msg
+    show (FormatParseError msg) = "FormatParseError: "<> T.unpack msg
+
+instance ShowErrorComponent ConfCryptError where
+    showErrorComponent (ParserError msg) = T.unpack msg
+    showErrorComponent (FormatParseError msg) = T.unpack msg
+    showErrorComponent _ = "Not a parsable error"
+
 
 instance Ord RSA.Error where
     (<=) l r = show l <= show r

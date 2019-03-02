@@ -10,6 +10,7 @@ import Data.Maybe (listToMaybe)
 import Text.Megaparsec (Parsec, parse, getSourcePos, SourcePos(..), unPos, (<?>), try, failure, oneOf, anySingle)
 import Text.Megaparsec.Char (char, space, eol, string', digitChar, alphaNumChar,
     symbolChar, separatorChar, letterChar, digitChar, string)
+import Text.Megaparsec.Error (errorBundlePretty)
 import qualified Data.Text as T
 import qualified Data.Map as M
 import qualified Data.Set as S
@@ -25,7 +26,7 @@ parseConfCrypt ::
     -> Either ConfCryptError ConfCryptFile
 parseConfCrypt filename contents =
     case parse confCryptParser filename contents of
-        Left err -> Left $ ParserError (T.pack $ show err)
+        Left err -> Left $ ParserError (T.pack $ errorBundlePretty err)
         Right rawLines -> Right $ assembleConfCrypt rawLines
     where
         findParamSchema lines ParamLine {pName} = listToMaybe . fmap fst . M.toList $ M.filterWithKey (\s _ ->
