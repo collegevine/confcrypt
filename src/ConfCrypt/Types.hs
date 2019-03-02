@@ -80,11 +80,9 @@ instance Show ConfCryptError where
     show (UnknownParameter msg) = "UnknownParameter: "<> T.unpack msg
     show (WrongFileAction msg) = "WrongFileAction: "<> T.unpack msg
     show (CleanupError msg) = "CleanupError: "<> T.unpack msg
-    show (FormatParseError msg) = "FormatParseError: "<> T.unpack msg
 
 instance ShowErrorComponent ConfCryptError where
     showErrorComponent (ParserError msg) = T.unpack msg
-    showErrorComponent (FormatParseError msg) = T.unpack msg
     showErrorComponent _ = "Not a parsable error"
 
 
