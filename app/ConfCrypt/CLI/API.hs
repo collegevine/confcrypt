@@ -204,7 +204,7 @@ onlyType =
         long "type" <>
         short 't' <>
         metavar "PARAMETER_TYPE" <>
-        help "The associated type for the variable"
+        help "The associated type for the variable. Must be one of [String, Int, Boolean]"
         )
     where
         fromString = read . (:) 'C'
