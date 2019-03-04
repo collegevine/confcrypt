@@ -106,7 +106,6 @@ readTests = testGroup "Read" [
         case res of
             Left e ->
                 e @=? FormatParseError "1:6:\n  |\n1 | foo%abar\n  |      ^\nUnrecognized variable a\n"
-                -- This is ugly, but it can't be improved without revamping error message formatting in general
             Right _ ->
                 assertFailure "Invalid format didn't throw an error"
 
