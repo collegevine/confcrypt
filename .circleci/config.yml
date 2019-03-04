@@ -7,7 +7,7 @@ defaults: &defaults
       CIRCLE_TEST_REPORTS: /tmp/circleci-test-results  # Came from Circle's own translation utility, not sure if really needed
 
     docker:
-    - image: haskell:8.4.3
+    - image: jhenligne/confcrypt:0.0
 
 version: 2
 jobs:
@@ -16,19 +16,6 @@ jobs:
     steps:
     - checkout
     - run: mkdir -p $CIRCLE_ARTIFACTS $CIRCLE_TEST_REPORTS
-
-    # Install libsysconfcpus, which allows us to intercept calls from ghc -> host OS and return the number of available cores rather
-    # than the total number of host cores. ie. run the build w/ the allowed 2 cores, instead of 32 or whatever the host indicates.
-    - run: if [ ! -d sysconfcpus/bin ];
-           then
-                buildDir=pwd
-                git clone https://github.com/obmarg/libsysconfcpus.git;
-                cd libsysconfcpus ;
-                ./configure;
-                make && make install;
-                cd ..;
-           fi
-
     - restore_cache:
         keys:
         # This branch if available
@@ -37,26 +24,85 @@ jobs:
         - circle20-master-
         # Any branch if there are none on the default branch - this should be unnecessary if you have your default branch configured correctly
         - circle20-
-
     - run:
-        command: sysconfcpus -n 2 stack test
+        command: sysconfcpus -n 2 stack test :confcrypt-detailed-tests
         no_output_timeout: 3600s
-
     - store_test_results:
         path: $CIRCLE_ARTIFACTS
     - store_artifacts:
         path: $CIRCLE_ARTIFACTS
     - store_artifacts:
         path: $CIRCLE_TEST_REPORTS
+
+  threshold-test-job:
+    <<: *defaults
+    steps:
+    - checkout
+    - restore_cache:
+          name: Restore Cached Dependencies
+          keys:
+            - cci-haskell-v1-{{ checksum "package.yaml" }}-{{ checksum "stack.yaml" }}
+    - run:
+          name: Resolve/Update Dependencies
+          command: stack setup
+    - save_cache:
+          name: Cache Dependencies
+          key: cci-haskell-v1-{{ checksum "package.yaml" }}-{{ checksum "stack.yaml" }}
+          paths:
+            - ~/.stack
+            - .stack-work
+    - restore_cache:
+        keys:
+        # This branch if available
+        - circle20-{{ .Branch }}-
+        # Default branch if not
+        - circle20-master-
+        # Any branch if there are none on the default branch - this should be unnecessary if you have your default branch configured correctly
+        - circle20-
+        - haskell-stack
+    - run:
+        # All tests with default 80% threshold:
+        command: sysconfcpus -n 2 stack test :confcrypt-threshold-tests --coverage
+        # All tests with provided threshold:
+        # ex: command: sysconfcpus -n 2 stack test :confcrypt-threshold-tests --coverage --ta "--threshold 90"
+        no_output_timeout: 3600s
+    - save_cache:
+          name: Stack Artifacts
+          key: haskell-stack
+          paths:
+            - .stack-work
+
+  coverage-job:
+    <<: *defaults
+    steps:
+    - checkout
+    - restore_cache:
+        keys:
+        # This branch if available
+        - circle20-{{ .Branch }}-
+        # Default branch if not
+        - circle20-master-
+        # Any branch if there are none on the default branch - this should be unnecessary if you have your default branch configured correctly
+        - circle20-
+        - haskell-stack
+    - run:
+        command: stack hpc report --all 2>&1 | hpc-threshold
+        no_output_timeout: 3600s
+
   lint-job:
       <<: *defaults
       steps:
       - checkout
       - run: source hlint.sh
+
 workflows:
     version: 2
 
     build-and-test:
         jobs:
-            - test-job
+#            - test-job
+            - threshold-test-job
+            - coverage-job:
+                requires:
+                    - threshold-test-job
             - lint-job

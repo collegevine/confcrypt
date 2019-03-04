@@ -1,14 +1,10 @@
+module Tests (appTests, libraryTests) where
+    
 import ConfCrypt.Parser.Tests (parserTests)
 import ConfCrypt.Commands.Tests (commandTests)
 import ConfCrypt.Encryption.Tests (encryptionTests)
 import ConfCrypt.CLI.API.Tests (cliAPITests)
-import Test.Tasty (TestTree, defaultMain, testGroup)
-
-main :: IO ()
-main = defaultMain $ testGroup "all tests" [
-    appTests,
-    libraryTests
-    ]
+import Test.Tasty (TestTree, testGroup)
 
 appTests :: TestTree
 appTests = testGroup "all application tests" [

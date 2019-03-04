@@ -77,8 +77,8 @@ executables:
         TupleSections ExistentialQuantification TypeApplications UndecidableInstances BangPatterns ViewPatterns
         GADTs
 tests:
-  confcrypt-test:
-    main:                Tests.hs
+  confcrypt-detailed-tests:
+    main:                DetailedTests.hs
     source-dirs:
         - test
         - app
@@ -86,9 +86,10 @@ tests:
         ConfCrypt.Parser.Tests,
         ConfCrypt.Commands.Tests,
         ConfCrypt.Encryption.Tests,
+        ConfCrypt.CLI.API,
         ConfCrypt.CLI.API.Tests,
-        ConfCrypt.Common,
-        ConfCrypt.CLI.API
+        ConfCrypt.Common
+        Tests
     ghc-options:
     - -threaded
     - -rtsopts
@@ -101,5 +102,37 @@ tests:
     - tasty-hunit
     - HUnit
     - memory
+    default-extensions: MultiParamTypeClasses OverloadedStrings FlexibleContexts FlexibleInstances NamedFieldPuns
+        TupleSections
+
+  confcrypt-threshold-tests:
+    main:                ThresholdTests.hs
+    source-dirs:
+        - test
+        - app
+    other-modules:
+        ConfCrypt.Parser.Tests,
+        ConfCrypt.Commands.Tests,
+        ConfCrypt.Encryption.Tests,
+        ConfCrypt.CLI.API,
+        ConfCrypt.CLI.API.Tests,
+        ConfCrypt.Common,
+        ConsoleReporter
+        Tests
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - confcrypt
+    - tasty
+    - tasty-quickcheck
+    - QuickCheck
+    - tasty-hunit
+    - HUnit
+    - memory
+    - tagged
+    - generic-deriving
+    - stm
     default-extensions: MultiParamTypeClasses OverloadedStrings FlexibleContexts FlexibleInstances NamedFieldPuns
         TupleSections
