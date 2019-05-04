@@ -75,7 +75,7 @@ readTests :: TestTree
 readTests = testGroup "Read" [
     testCase "reading produces decrypted results" $ do
         let testLines = parseConfCrypt "test file" testFile
-        res <- getReadResult testLines
+        res <- getReadResult Nothing testLines
         case res of
             Left e ->
                 assertFailure $ show e
@@ -84,23 +84,41 @@ readTests = testGroup "Read" [
 
    ,testCase "reading an empty file is an empty file" $ do
         let testLines = parseConfCrypt "empty test file" "# just a comment"
-        res <- getReadResult testLines
+        res <- getReadResult Nothing testLines
         case res of
             Left e ->
                 assertFailure $ show e
             Right lines ->
                 lines @=? []
 
+    ,testCase "user-specified formats are used to render output" $ do
+        let testLines = parseConfCrypt "test file" testFile
+        res <- getReadResult (Just "foo%t %n=%v %%") testLines
+        case res of
+            Left e ->
+                assertFailure $ show e
+            Right lines ->
+                lines @=? ["fooString Test=Foobar %", "fooInt Test2=42 %"]
+
+    ,testCase "invalid formats give an error" $ do
+        let testLines = parseConfCrypt "test file" testFile
+        res <- getReadResult (Just "foo%abar") testLines
+        case res of
+            Left e ->
+                e @=? FormatParseError "1:6:\n  |\n1 | foo%abar\n  |      ^\nUnrecognized variable a\n"
+            Right _ ->
+                assertFailure "Invalid format didn't throw an error"
+
     -- TODO implement the 'Arbitrary' instance to make this rule possible
    -- ,testProperty "read . encrypt . read == id" $ \x -> x == 0
     ]
     where
-        getReadResult :: Either ConfCryptError ConfCryptFile -> IO (Either ConfCryptError [T.Text])
-        getReadResult testLines = do
+        getReadResult :: Maybe T.Text -> Either ConfCryptError ConfCryptFile -> IO (Either ConfCryptError [T.Text])
+        getReadResult tpl testLines = do
             probablyKP <- runExceptT $ unpackPrivateRSAKey dangerousTestKey
             privateKey <- either (assertFailure . show) (pure . project ) probablyKP :: IO RSA.PrivateKey
             ccf <- either (assertFailure . show) pure testLines
-            runResourceT . runExceptT $ runReaderT (evaluate ReadConfCrypt) (ccf, TextKey privateKey) :: IO (Either ConfCryptError [T.Text])
+            runResourceT . runExceptT $ runReaderT (evaluate $ ReadConfCrypt tpl) (ccf, TextKey privateKey) :: IO (Either ConfCryptError [T.Text])
 
 
 addTests :: TestTree

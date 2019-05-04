@@ -8,13 +8,17 @@ module ConfCrypt.CLI.API (
 ) where
 
 import ConfCrypt.Types (SchemaType(..))
-import ConfCrypt.Commands (GetConfCrypt(..), AddConfCrypt(..), EditConfCrypt(..), DeleteConfCrypt(..))
+import ConfCrypt.Commands (GetConfCrypt(..), AddConfCrypt(..), EditConfCrypt(..), DeleteConfCrypt(..), ReadConfCrypt(..))
 
-import Options.Applicative (ParserInfo, Parser, progDesc, command, fullDesc, long, flag, metavar,
-    help, strOption, short, info, header, footer, strArgument, hsubparser, helper, (<**>))
+import Options.Applicative
+       (ParserInfo, Parser, progDesc, command, fullDesc, long, flag,
+        metavar, maybeReader, help, strOption, short, info, header, footer,
+        strArgument, hsubparser, helper, (<**>), value, option, auto,
+        ReadM)
 import qualified Data.Text as T
 import Paths_confcrypt (version)
 import Data.Version (showVersion)
+import Text.Read (readMaybe)
 
 data KeyAndConf = KeyAndConf {key :: ParsedKey, provider :: KeyProvider, conf :: FilePath}
     deriving (Eq, Show)
@@ -22,7 +26,7 @@ newtype Conf = Conf FilePath
     deriving (Eq, Show)
 
 data AnyCommand
-    = RC KeyAndConf
+    = RC KeyAndConf ReadConfCrypt
     | GC KeyAndConf GetConfCrypt
     | AC KeyAndConf AddConfCrypt
     | EC KeyAndConf EditConfCrypt
@@ -125,7 +129,7 @@ delete = info ( DC <$> getConf <*> (DeleteConfCrypt <$> onlyName))
 readConf ::
     KeyProvider
     -> ParserInfo AnyCommand
-readConf provider = info ( RC <$> keyAndConf provider False)
+readConf provider = info ( RC <$> keyAndConf provider False <*> (ReadConfCrypt <$> onlyFormat))
            (progDesc "Read in the provided config and decrypt it with the key. Results are printed to StdOut." <>
             fullDesc)
 
@@ -208,3 +212,19 @@ onlyType =
         )
     where
         fromString = read . (:) 'C'
+
+onlyFormat :: Parser (Maybe T.Text)
+onlyFormat = option maybeOptReader (
+    long "format" <>
+    short 'f' <>
+    metavar "TEMPLATE" <>
+    value Nothing <>
+    help (
+        "Output parameters in a custom format specified by a template, with placeholders being replaced " <>
+        "with the values for each parameter. Placeholders consist of a '%' and a single character, " <>
+        "a literal '%' can be written as '%%'. Valid placeholders are: %t: type, %n: name, %v: value."
+        )
+    )
+
+maybeOptReader :: ReadM (Maybe T.Text)
+maybeOptReader = maybeReader $ Just. Just . T.pack

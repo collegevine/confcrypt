@@ -66,6 +66,7 @@ data ConfCryptError
     | UnknownParameter T.Text
     | WrongFileAction T.Text
     | CleanupError T.Text
+    | FormatParseError T.Text
     deriving (Generic, Eq, Ord)
 
 instance Show ConfCryptError where
@@ -80,11 +81,11 @@ instance Show ConfCryptError where
     show (UnknownParameter msg) = "UnknownParameter: "<> T.unpack msg
     show (WrongFileAction msg) = "WrongFileAction: "<> T.unpack msg
     show (CleanupError msg) = "CleanupError: "<> T.unpack msg
+    show (FormatParseError msg) = "Format parse error: "<> T.unpack msg
 
 instance ShowErrorComponent ConfCryptError where
     showErrorComponent (ParserError msg) = T.unpack msg
     showErrorComponent _ = "Not a parsable error"
-
 
 instance Ord RSA.Error where
     (<=) l r = show l <= show r
