@@ -89,7 +89,8 @@ tests:
         ConfCrypt.Encryption.Tests,
         ConfCrypt.CLI.API.Tests,
         ConfCrypt.Common,
-        ConfCrypt.CLI.API
+        ConfCrypt.CLI.API,
+        ConfCrypt.Template.Tests
     ghc-options:
     - -threaded
     - -rtsopts
