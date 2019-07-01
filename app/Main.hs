@@ -15,7 +15,7 @@ main = do
     (results, outputPath) <- run parsedArguments
     case outputPath of
         Nothing -> traverse_ (putStrLn . unpack) results
-        Just fp -> T.writeFile fp $ (T.intercalate "\n" results) <> "\n"
+        Just fp -> T.writeFile fp $ T.intercalate "\n" results <> "\n"
     -- The ^ `putStrLn` call is important to preserve the trailing newline. Consider
     -- moving this into the library to make the code read more clearly.
     -- There's no reason that `writeFullContentsToBuffer` can't tag each line with a trailing newline
