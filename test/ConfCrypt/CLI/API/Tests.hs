@@ -152,7 +152,7 @@ addCases = testGroup "add" [
         let args =  ["rsa", "add", "--key", "testKey", "--name", "test", "--type", "String", "--value", "foo", "test.econf"]
             res = execParserPure defaultPrefs cliParser args
         case res of
-            Success (AC (KeyAndConf (OnDisk "testKey") LocalRSA "test.econf") (AddConfCrypt "test" "foo" CString)) -> assertBool "can't fail" True
+            Success (AC (KeyAndConf (OnDisk "testKey") LocalRSA "test.econf") (AddConfCrypt "test" "foo" CString) StdOut) -> assertBool "can't fail" True
             Success a -> assertFailure ("Incorrectly parsed: "<> show a)
             Failure _ -> assertFailure "Should have parsed an AC"
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
@@ -161,7 +161,7 @@ addCases = testGroup "add" [
         let args =  ["rsa", "add", "-k", "testKey", "-n", "test", "-t", "String", "-v", "foo", "test.econf"]
             res = execParserPure defaultPrefs cliParser args
         case res of
-            Success (AC (KeyAndConf (OnDisk "testKey") LocalRSA "test.econf") (AddConfCrypt "test" "foo" CString)) -> assertBool "can't fail" True
+            Success (AC (KeyAndConf (OnDisk "testKey") LocalRSA "test.econf") (AddConfCrypt "test" "foo" CString) StdOut) -> assertBool "can't fail" True
             Success a -> assertFailure ("Incorrectly parsed: "<> show a)
             Failure _ -> assertFailure "Should have parsed an AC"
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
@@ -213,7 +213,7 @@ editCases = testGroup "edit" [
         let args =  ["rsa", "edit", "--key", "testKey", "--name", "test", "--type", "String", "--value", "foo", "test.econf"]
             res = execParserPure defaultPrefs cliParser args
         case res of
-            Success (EC (KeyAndConf (OnDisk "testKey") LocalRSA "test.econf") (EditConfCrypt "test" "foo" CString)) -> assertBool "can't fail" True
+            Success (EC (KeyAndConf (OnDisk "testKey") LocalRSA "test.econf") (EditConfCrypt "test" "foo" CString) StdOut) -> assertBool "can't fail" True
             Success a -> assertFailure ("Incorrectly parsed: "<> show a)
             Failure _ -> assertFailure "Should have parsed an AC"
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
@@ -222,7 +222,7 @@ editCases = testGroup "edit" [
         let args =  ["rsa", "edit", "-k", "testKey", "-n", "test", "-t", "String", "-v", "foo", "test.econf"]
             res = execParserPure defaultPrefs cliParser args
         case res of
-            Success (EC (KeyAndConf (OnDisk "testKey") LocalRSA "test.econf") (EditConfCrypt "test" "foo" CString)) -> assertBool "can't fail" True
+            Success (EC (KeyAndConf (OnDisk "testKey") LocalRSA "test.econf") (EditConfCrypt "test" "foo" CString) StdOut) -> assertBool "can't fail" True
             Success a -> assertFailure ("Incorrectly parsed: "<> show a)
             Failure _ -> assertFailure "Should have parsed an AC"
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
@@ -250,7 +250,7 @@ deleteCases = testGroup "delete" [
         let args =  ["delete", "--name", "test", "test.econf"]
             res = execParserPure defaultPrefs cliParser args
         case res of
-            Success (DC (Conf "test.econf") (DeleteConfCrypt "test")) -> assertBool "can't fail" True
+            Success (DC (Conf "test.econf") (DeleteConfCrypt "test") StdOut) -> assertBool "can't fail" True
             Success a -> assertFailure ("Incorrectly parsed: "<> show a)
             Failure _ -> assertFailure "Should have parsed a DC"
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"
@@ -259,7 +259,7 @@ deleteCases = testGroup "delete" [
         let args =  ["delete", "-n", "test", "test.econf"]
             res = execParserPure defaultPrefs cliParser args
         case res of
-            Success (DC (Conf "test.econf") (DeleteConfCrypt "test")) -> assertBool "can't fail" True
+            Success (DC (Conf "test.econf") (DeleteConfCrypt "test") StdOut) -> assertBool "can't fail" True
             Success a -> assertFailure ("Incorrectly parsed: "<> show a)
             Failure _ -> assertFailure "Should have parsed a DC"
             CompletionInvoked _ -> assertFailure "Incorrectly triggered completion"

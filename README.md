@@ -40,14 +40,20 @@ brew cask install confcrypt
     `confcrypt rsa read --key <filename> <filename>`
     This command reads in the provided file, decrypts the configuration variables using the provided key, then prints them to stdout. This allows you to pipe the results to other utilities. Returns 0 on success.
 - add a parameter
-    `confcrypt rsa add --key <filename> --name <String> --type <SchemaType> --vaue <String> <filename>
-    Adds a new confguration parameter to the file. `--name` and `--value` are required, while `--type` is optional. If `--type` is provided, the schema record will be added immediately before the config variable. In total this adds two lines to the file. Returns 0 on sccess.
+    `confcrypt rsa add --key <filename> --name <String> --type <SchemaType> --vaue <String> --in-place <filename>
+    Adds a new confguration parameter to the file. `--name` and `--value` are required, while `--type` and `--in-place`are optional.
+    If `--type` is provided, the schema record will be added immediately before the config variable.
+    `--in-place` toggles whether to overwrite the provided file or emit the results to stdout.
+    In total this adds two lines to the file. Returns 0 on sccess.
 - remove a parameter
-    `confcrypt delete --name <filename>`
+    `confcrypt delete --name <String> --in-place <filename>`
     Removes an existing config parameter & associated schema. Returns 0 on success or 1 if the parameter is not found in the file.
+    `--in-place` toggles whether to overwrite the provided file or emit the results to stdout.
 - edit a parameter in-place
-    `confcrypt rsa edit --key <filename> --name <String> --value <String> --type <SchemaType> <filename>`
-    Modifies an existing configuration parameter in place, leaving all other lines unchanged. While this isn't how it's actually implemented, this operation is equivalent to piping `confcrypt read` to a new file, editing the parameter, then reencrypting it.
+    `confcrypt rsa edit --key <filename> --name <String> --value <String> --type <SchemaType> --in-place <filename>`
+    Modifies an existing configuration parameter in place, leaving all other lines unchanged.
+    While this isn't how it's actually implemented, this operation is equivalent to piping `confcrypt read` to a new file, editing the parameter, then reencrypting it.
+    `--in-place` toggles whether to overwrite the provided file or emit the results to stdout.
 - validate a config
     `confcrypt rsa validate --key <filename> <filename>`
     Checks that each config parameter matches the type of its schema. All errors are accumulated and returned at the end, with a response code equal to the number of failures.
