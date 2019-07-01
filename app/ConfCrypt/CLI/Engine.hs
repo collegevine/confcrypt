@@ -9,7 +9,8 @@ import ConfCrypt.Parser (parseConfCrypt)
 import ConfCrypt.Encryption
 import ConfCrypt.Default (emptyConfCryptFile)
 import ConfCrypt.Providers.AWS (AWSCtx, loadAwsCtx, KMSKeyId(..))
-import ConfCrypt.CLI.API (AnyCommand(..), Conf(..), KeyAndConf(..), KeyProvider(..), ParsedKey(..))
+import ConfCrypt.CLI.API (AnyCommand(..), Conf(..), KeyAndConf(..),
+    KeyProvider(..), ParsedKey(..), InPlace(..))
 
 import Conduit (ResourceT, runResourceT)
 import Control.Exception (catch)
@@ -29,17 +30,22 @@ import System.Exit (exitSuccess, exitFailure, exitWith, ExitCode(..))
 -- This wraps and drives the core ConfCrypt library.
 run ::
     AnyCommand  -- ^ Command line arguments
-    -> IO [T.Text]
+    -> IO ([T.Text], Maybe FilePath)
 run NC = do
     res <- runConfCrypt emptyConfCryptFile $ evaluate NewConfCrypt
     either (\e -> print e *> exitFailure)
-           pure
+           (pure . (,Nothing))
            res
-run (VER version) = pure [version]
+run (VER version) = pure ([version], Nothing)
 run parsedArguments = do
     let filePath = confFilePath parsedArguments
     lines <- T.readFile filePath
     configParsingResults <- parseConfCrypt filePath <$> pure lines
+    -- This allows threading the file path into the return, for use in
+    -- in-place edits
+    let overwritePath = if overwriteExisting parsedArguments
+                        then Just filePath
+                        else Nothing
     case configParsingResults of
         --TODO print errors to stdErr
         Left err -> print err *> exitFailure
@@ -48,22 +54,24 @@ run parsedArguments = do
 
                 -- Requires Decryption
                 RC KeyAndConf {key, provider} cmd ->
-                    runConfCrypt parsedConfiguration $ runWithDecrypt key provider cmd
+                        runConfCrypt parsedConfiguration $ runWithDecrypt key provider cmd
                 GC KeyAndConf {key, provider} cmd ->
-                    runConfCrypt parsedConfiguration $ runWithDecrypt key provider cmd
+                        runConfCrypt parsedConfiguration $ runWithDecrypt key provider cmd
                 VC KeyAndConf {key, provider} ->
                     runConfCrypt parsedConfiguration $ runWithDecrypt key provider ValidateConfCrypt
 
                 -- Requires Encryption
-                AC KeyAndConf {key, provider} cmd ->
+                AC KeyAndConf {key, provider} cmd _ ->
                     runConfCrypt parsedConfiguration $ runWithEncrypt key provider cmd
-                EC KeyAndConf {key, provider} cmd ->
+                EC KeyAndConf {key, provider} cmd _ ->
                     runConfCrypt parsedConfiguration $ runWithEncrypt key provider cmd
 
                 -- Doesn't care about encryption
-                DC _ cmd ->
+                DC _ cmd _ ->
                     runConfCrypt parsedConfiguration $ evaluate cmd
-            either (\e -> print e *> exitFailure) pure result
+            either (\e -> print e *> exitFailure)
+                   (pure . (, overwritePath))
+                   result
     where
 
         -- Inject an encryption context into the currently loaded environment. This varies dependng
@@ -110,6 +118,13 @@ confFilePath :: AnyCommand -> FilePath
 confFilePath  (RC KeyAndConf {conf} _) = conf
 confFilePath  (GC KeyAndConf {conf} _) = conf
 confFilePath  (VC KeyAndConf {conf}) = conf
-confFilePath  (AC KeyAndConf {conf} _) = conf
-confFilePath  (EC KeyAndConf {conf} _) = conf
-confFilePath  (DC (Conf conf) _) = conf
+confFilePath  (AC KeyAndConf {conf} _ _) = conf
+confFilePath  (EC KeyAndConf {conf} _ _) = conf
+confFilePath  (DC (Conf conf) _ _) = conf
+
+overwriteExisting :: AnyCommand -> Bool
+overwriteExisting  (AC _ _ Overwrite) = True
+overwriteExisting  (EC _ _ Overwrite) = True
+overwriteExisting  (DC _ _ Overwrite) = True
+overwriteExisting  _ = False
+

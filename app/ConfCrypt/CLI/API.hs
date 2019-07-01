@@ -4,6 +4,7 @@ module ConfCrypt.CLI.API (
     KeyProvider(..),
     AnyCommand(..),
     ParsedKey(..),
+    InPlace(..),
     cliParser
 ) where
 
@@ -11,7 +12,7 @@ import ConfCrypt.Types (SchemaType(..))
 import ConfCrypt.Commands (GetConfCrypt(..), AddConfCrypt(..), EditConfCrypt(..), DeleteConfCrypt(..), ReadConfCrypt(..))
 
 import Options.Applicative
-       (ParserInfo, Parser, progDesc, command, fullDesc, long, flag,
+       (ParserInfo, Parser, progDesc, command, fullDesc, long, switch,
         metavar, maybeReader, help, strOption, short, info, header, footer,
         strArgument, hsubparser, helper, (<**>), value, option, auto,
         ReadM)
@@ -24,13 +25,17 @@ data KeyAndConf = KeyAndConf {key :: ParsedKey, provider :: KeyProvider, conf ::
     deriving (Eq, Show)
 newtype Conf = Conf FilePath
     deriving (Eq, Show)
+data InPlace
+    = Overwrite
+    | StdOut
+    deriving (Eq, Show)
 
 data AnyCommand
     = RC KeyAndConf ReadConfCrypt
     | GC KeyAndConf GetConfCrypt
-    | AC KeyAndConf AddConfCrypt
-    | EC KeyAndConf EditConfCrypt
-    | DC Conf DeleteConfCrypt
+    | AC KeyAndConf AddConfCrypt InPlace
+    | EC KeyAndConf EditConfCrypt InPlace
+    | DC Conf DeleteConfCrypt InPlace
     | VC KeyAndConf
     | VER T.Text
     | NC
@@ -110,19 +115,19 @@ vers = info (pure . VER . T.pack $ showVersion version)
 add ::
     KeyProvider
     -> ParserInfo AnyCommand
-add provider = info ( AC <$> keyAndConf provider True <*> (AddConfCrypt <$> onlyName <*> onlyValue <*> onlyType))
+add provider = info ( AC <$> keyAndConf provider True <*> (AddConfCrypt <$> onlyName <*> onlyValue <*> onlyType) <*> inPlace)
            (progDesc "Add a new parameter to the configuration file. New parameters are added to the end of the file." <>
             fullDesc)
 
 edit ::
     KeyProvider
     -> ParserInfo AnyCommand
-edit provider = info ( EC <$> keyAndConf provider True <*> (EditConfCrypt <$> onlyName <*> onlyValue <*> onlyType))
+edit provider = info ( EC <$> keyAndConf provider True <*> (EditConfCrypt <$> onlyName <*> onlyValue <*> onlyType) <*> inPlace)
            (progDesc "Modify an existing parameter in-place. This should preserve a clean diff." <>
             fullDesc)
 
 delete :: ParserInfo AnyCommand
-delete = info ( DC <$> getConf <*> (DeleteConfCrypt <$> onlyName))
+delete = info ( DC <$> getConf <*> (DeleteConfCrypt <$> onlyName) <*> inPlace)
            (progDesc "Removes an existing parameter from the configuration." <>
             fullDesc)
 
@@ -185,6 +190,16 @@ getConf = Conf <$> onlyConf
 
 onlyConf :: Parser FilePath
 onlyConf = strArgument (metavar "CONFIG_FILE")
+
+inPlace :: Parser InPlace
+inPlace = toInPlace <$> switch (
+    long "in-place" <>
+    short 'p' <>
+    help "Allows overwriting the existing confcrypt file rather than emitting the results to stdOut."
+    )
+    where
+        toInPlace True = Overwrite
+        toInPlace False = StdOut
 
 onlyName :: Parser T.Text
 onlyName = strOption (
