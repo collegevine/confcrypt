@@ -54,9 +54,9 @@ run parsedArguments = do
 
                 -- Requires Decryption
                 RC KeyAndConf {key, provider} cmd ->
-                        runConfCrypt parsedConfiguration $ runWithDecrypt key provider cmd
+                    runConfCrypt parsedConfiguration $ runWithDecrypt key provider cmd
                 GC KeyAndConf {key, provider} cmd ->
-                        runConfCrypt parsedConfiguration $ runWithDecrypt key provider cmd
+                    runConfCrypt parsedConfiguration $ runWithDecrypt key provider cmd
                 VC KeyAndConf {key, provider} ->
                     runConfCrypt parsedConfiguration $ runWithDecrypt key provider ValidateConfCrypt
 
