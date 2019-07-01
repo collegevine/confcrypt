@@ -1,4 +1,4 @@
-FROM ubuntu:bionic-20190612
+FROM ruby:2.6.3-stretch
 
 RUN apt-get update && apt-get install curl git -y
 

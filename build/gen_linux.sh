@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 
 # Build the Linux docker image, spin up a container, then copy out the confcrypt binary and
 # dump it locally. Finally, tear down the image.
