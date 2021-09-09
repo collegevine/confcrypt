@@ -20,4 +20,5 @@ jobs:
       run: |
         set -ex
         stack upgrade || curl -sSL https://get.haskellstack.org/ | sh -s - -f
+        source hlint.sh
         stack test
