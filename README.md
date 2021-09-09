@@ -7,7 +7,7 @@ As soon as an application is deployed or built on more than a single machine, yo
 #### Mac OSX via Brew
 ```
 brew tap collegevine/brew
-brew cask install confcrypt
+brew install confcrypt
 ```
 #### Windows, Linux, & OSX native
 
