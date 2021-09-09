@@ -15,7 +15,7 @@ jobs:
     - uses: actions/cache@v1
       with:
         path: ~/.stack
-        key: ${{ hashFiles('stack.yml','package.yml') }}
+        key: ${{ hashFiles('stack.yaml','package.yaml') }}
     - shell: bash
       run: |
         set -ex
