@@ -1,0 +1,23 @@
+name: build
+
+on:
+  push:
+    branches: [ master, gh-actions ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/cache@v1
+      with:
+        path: ~/.stack
+        key: ${{ hashFiles('stack.yml','package.yml') }}
+    - shell: bash
+      run: |
+        set -ex
+        stack upgrade || curl -sSL https://get.haskellstack.org/ | sh -s - -f
+        stack test
