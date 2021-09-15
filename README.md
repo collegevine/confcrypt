@@ -40,7 +40,7 @@ brew install confcrypt
     `confcrypt rsa read --key <filename> <filename>`
     This command reads in the provided file, decrypts the configuration variables using the provided key, then prints them to stdout. This allows you to pipe the results to other utilities. Returns 0 on success.
 - **add a parameter**
-    `confcrypt rsa add --key <filename> --name <String> --type <SchemaType> --vaue <String> --in-place <filename>`
+    `confcrypt rsa add --key <filename> --name <String> --type <SchemaType> --value <String> --in-place <filename>`
     Adds a new confguration parameter to the file. `--name` and `--value` are required, while `--type` and `--in-place`are optional.
     If `--type` is provided, the schema record will be added immediately before the config variable.
     `--in-place` toggles whether to overwrite the provided file or emit the results to stdout.
