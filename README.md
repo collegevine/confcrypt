@@ -13,8 +13,6 @@ brew install confcrypt
 
 1. If you don't have Haskell installed and working already, you'll need it.  Install `stack` from [haskellstack.org](https://haskellstack.org/).
 2. At the root of this repo, run `stack install`.  (Takes 10-15 minutes.)
-    - If you're on an M1 Mac, you may need to run `stack install --arch x86_64` and enable Rosetta when prompted to.
-
 
 ## Using confcrypt
 - **create a config**
