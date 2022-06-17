@@ -56,8 +56,8 @@ extra-deps:
 # require-stack-version: ">=1.7"
 #
 # Override the architecture used by stack, especially useful on Windows
-# arch: i386
-# arch: x86_64
+# In combination with Rosetta, works on newer Mac M1 models.
+arch: x86_64
 #
 # Extra directories used by stack for building
 # extra-include-dirs: [/path/to/dir]
